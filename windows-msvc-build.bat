@@ -193,6 +193,11 @@ IF DEFINED REALLY_QUIET (
 del *.obj
 IF NOT DEFINED QUIET echo COMPILE-INFO: Game compiled into an executable in: !OUTPUT_DIR!\
 
+REM Copy resources
+IF EXIST "sdf_shader.glsl" del sdf_shader.glsl
+cp !ROOT_DIR!\src\sdf_shader.glsl sdf_shader.glsl
+IF NOT DEFINED QUIET echo COMPILE-INFO: Game resources copied into: !OUTPUT_DIR!\
+
 REM Run upx
 IF DEFINED UPX_IT (
   IF NOT DEFINED QUIET echo COMPILE-INFO: Packing !GAME_NAME! with upx.

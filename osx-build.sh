@@ -148,6 +148,10 @@ fi
 rm *.o
 [ -z "$QUIET" ] && echo "COMPILE-INFO: Game compiled into an executable in: $OUTPUT_DIR/"
 
+[ -f "sdf_shader.glsl" ] && rm sdf_shader.glsl
+cp $ROOT_DIR/src/sdf_shader.glsl sdf_shader.glsl
+[ -z "$QUIET" ] && echo "COMPILE-INFO: Game resources copied into: $OUTPUT_DIR/"
+
 if [ -n "$STRIP_IT" ]; then
     [ -z "$QUIET" ] && echo "COMPILE-INFO: Stripping $GAME_NAME."
     strip $GAME_NAME
