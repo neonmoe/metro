@@ -17,6 +17,7 @@
 
 #include "raylib.h"
 #include "raymath.h"
+#include "math.h"
 
 const int VIRTUAL_SCREEN_HEIGHT = 225;
 
@@ -56,26 +57,35 @@ int main(void) {
 
         if (IsKeyDown(KEY_LEFT)) {
             cameraRotation[1] -= delta * 120.0;
+            if (cameraRotation[1] < 0.0) {
+                cameraRotation[1] += 360;
+            }
         }
         if (IsKeyDown(KEY_RIGHT)) {
             cameraRotation[1] += delta * 120.0;
+            if (cameraRotation[1] > 360) {
+                cameraRotation[1] -= 360;
+            }
         }
-        // TODO: Camera rotation based movement
-        // Should be doable without matrix math, something like this:
-        // x = cos(r) * delta - sin(r) * delta
-        // y = sin(r) * delta + cos(r) * delta
+
+        float r = cameraRotation[1] * DEG2RAD;
         if (IsKeyDown(KEY_W)) {
-            cameraPosition[2] += delta * 2.0;
-        }
-        if (IsKeyDown(KEY_A)) {
-            cameraPosition[0] -= delta * 2.0;
+            cameraPosition[0] += delta * 2.0 * sinf(r);
+            cameraPosition[2] += delta * 2.0 * cosf(r);
         }
         if (IsKeyDown(KEY_S)) {
-            cameraPosition[2] -= delta * 2.0;
+            cameraPosition[0] -= delta * 2.0 * sinf(r);
+            cameraPosition[2] -= delta * 2.0 * cosf(r);
         }
         if (IsKeyDown(KEY_D)) {
-            cameraPosition[0] += delta * 2.0;
+            cameraPosition[0] += delta * 2.0 * cosf(r);
+            cameraPosition[2] += delta * 2.0 * -sinf(r);
         }
+        if (IsKeyDown(KEY_A)) {
+            cameraPosition[0] -= delta * 2.0 * cosf(r);
+            cameraPosition[2] -= delta * 2.0 * -sinf(r);
+        }
+
         if (IsKeyDown(KEY_LEFT_CONTROL)) {
             cameraPosition[1] = Lerp(cameraPosition[1], 0.9, 10.0 * delta);
         } else {
