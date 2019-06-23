@@ -23,17 +23,12 @@
 
 // 3D environment defining variables
 // TODO: Make a better palette
-#define LIGHTS_COUNT 2
-#define COLOR_LIGHT vec3(0.7, 0.68, 0.65)
+#define LIGHTS_COUNT 1
+#define COLOR_LIGHT_ON vec3(4.0, 4.0, 4.0)
+#define COLOR_LIGHT_OFF vec3(1.0, 1.0, 1.0)
 #define COLOR_WOOD vec3(0.6, 0.4, 0.05)
 #define COLOR_RAIL vec3(0.6, 0.6, 0.75)
 #define COLOR_TUNNEL vec3(0.6, 0.554, 0.5)
-
-varying vec4 position;
-
-uniform vec2 resolution;
-uniform vec3 cameraPosition;
-uniform vec3 cameraRotation;
 
 struct Camera {
     vec3 position;
@@ -50,9 +45,16 @@ struct Light {
     float distance;
 };
 
+varying vec4 position;
+
+uniform vec2 resolution;
+uniform vec3 cameraPosition;
+uniform vec3 cameraRotation;
+
 uniform Light lights[LIGHTS_COUNT] =
-    Light[LIGHTS_COUNT](Light(vec3(3.0, 3.0, 4.0), 3.0),
-                        Light(vec3(-4.0, 2.5, 6.0), 1.0));
+    Light[LIGHTS_COUNT](Light(vec3(-1.8, 3.6, 3.5), 6.0));
+
+uniform int enabledLight = 0;
 
 /* SDFs: https://www.iquilezles.org/www/articles/distfunctions/distfunctions.htm */
 
@@ -67,14 +69,14 @@ float sdfBox(vec3 samplePos, vec3 center, vec3 extents) {
 
 float sdfRoundedBox(vec3 samplePos, vec3 center, vec3 extents) {
   vec3 d = abs(center - samplePos) - extents;
-  return length(max(d, 0.0)) - 0.5 + min(max(d.x, max(d.y, d.z)), 0.0);
+  return length(max(d, 0.0)) - 0.1 + min(max(d.x, max(d.y, d.z)), 0.0);
 }
 
 SDFSample sdfRails(vec3 samplePos) {
     vec3 period = vec3(0.0, 0.0, 1.0);
     vec3 repeatedSample = mod(samplePos, period) - 0.5 * period;
     repeatedSample.x = abs(repeatedSample.x);
-    float distance = sdfBox(repeatedSample, vec3(0.762, 0.2, 0.0), vec3(0.07, 0.1, 0.5));
+    float distance = sdfBox(repeatedSample, vec3(0.762, 0.18, 0.0), vec3(0.07, 0.1, 0.5));
     return SDFSample(distance, COLOR_RAIL);
 }
 
@@ -98,13 +100,17 @@ SDFSample sdfLightMeshes(vec3 samplePos) {
     vec3 period = vec3(0.0, 0.0, 5.0);
     vec3 repeatedSample = mod(samplePos, period) - 0.5 * period;
     float distance = sdfBox(repeatedSample, vec3(-1.8, 3.6, 1.0), vec3(0.2, 0.2, 0.3));
-    return SDFSample(distance, COLOR_LIGHT);
+    if (floor(samplePos.z / 5.0) == enabledLight) {
+        return SDFSample(distance, COLOR_LIGHT_ON);
+    } else {
+        return SDFSample(distance, COLOR_LIGHT_OFF);
+    }
 }
 
 #define OBJECTS_COUNT 4
-SDFSample sdf(vec3 samplePos) {
+SDFSample sdf(vec3 samplePos, bool ignoreLightMeshes) {
     SDFSample samples[OBJECTS_COUNT] = SDFSample[OBJECTS_COUNT]
-        (sdfLightMeshes(samplePos),
+        (ignoreLightMeshes ? SDFSample(10000.0, vec3(0.0, 0.0, 0.0)) : sdfLightMeshes(samplePos),
          sdfTunnel(samplePos),
          sdfRails(samplePos),
          sdfRailPlanks(samplePos));
@@ -143,13 +149,33 @@ float get_fog(vec3 cam, vec3 position) {
 }
 
 vec3 get_normal(vec3 samplePos) {
-    float x = sdf(samplePos + vec3(SDF_SURFACE_THRESHOLD, 0.0, 0.0)).distance -
-        sdf(samplePos - vec3(SDF_SURFACE_THRESHOLD, 0.0, 0.0)).distance;
-    float y = sdf(samplePos + vec3(0.0, SDF_SURFACE_THRESHOLD, 0.0)).distance -
-        sdf(samplePos - vec3(0.0, SDF_SURFACE_THRESHOLD, 0.0)).distance;
-    float z = sdf(samplePos + vec3(0.0, 0.0, SDF_SURFACE_THRESHOLD)).distance -
-        sdf(samplePos - vec3(0.0, 0.0, SDF_SURFACE_THRESHOLD)).distance;
+    float x = sdf(samplePos + vec3(SDF_SURFACE_THRESHOLD, 0.0, 0.0), false).distance -
+        sdf(samplePos - vec3(SDF_SURFACE_THRESHOLD, 0.0, 0.0), false).distance;
+    float y = sdf(samplePos + vec3(0.0, SDF_SURFACE_THRESHOLD, 0.0), false).distance -
+        sdf(samplePos - vec3(0.0, SDF_SURFACE_THRESHOLD, 0.0), false).distance;
+    float z = sdf(samplePos + vec3(0.0, 0.0, SDF_SURFACE_THRESHOLD), false).distance -
+        sdf(samplePos - vec3(0.0, 0.0, SDF_SURFACE_THRESHOLD), false).distance;
     return normalize(vec3(x, y, z));
+}
+
+float get_shadow(vec3 samplePos, vec3 lightPos) {
+    vec3 direction = normalize(lightPos - samplePos);
+    vec3 position = samplePos + direction * 0.2;
+    int steps = 1;
+    for (; steps < 100; steps++) {
+        SDFSample s = sdf(position, true);
+        float maxDistance = length(lightPos - position);
+        if (s.distance > maxDistance) {
+            return 0.0;
+        }
+
+        if (s.distance < SDF_SURFACE_THRESHOLD) {
+            return 1.0;
+        } else {
+            position += direction * s.distance;
+        }
+    }
+    return 0.0;
 }
 
 // TODO: Add specularity
@@ -160,22 +186,26 @@ float get_brightness(vec3 samplePos, vec3 normal, float fog) {
     for (int i = 0; i < LIGHTS_COUNT; i++) {
         Light light = lights[i];
         vec3 lightDir = light.position - samplePos;
-        diffuse += light.distance / length(lightDir) *
-            max(0.0, dot(normal, normalize(lightDir))) * 0.2;
+        diffuse += pow(1.0 - max(0.0, min(1.0, length(lightDir) / light.distance)), 0.5) *
+            max(0.0, dot(normal, normalize(lightDir))) *
+            (1.0 - get_shadow(samplePos, light.position)) * 0.35;
     }
     return min(1.0, diffuse) + ambient;
 }
 
 // TODO: Improve the AO algorithm, it's a bit dumb currently
 float get_ambient_occlusion(vec3 samplePos, vec3 normal) {
-    vec3 step = normal * 0.25;
-    float distance = 0.1;
-    for (; distance < 1.0; distance += 0.1) {
-        if (sdf(samplePos + step * distance).distance < SDF_SURFACE_THRESHOLD) {
-            break;
+    float step = 0.005;
+    vec3 position = samplePos + normal * step;
+    int steps = 0;
+    for (; steps < 10; steps++) {
+        SDFSample s = sdf(position, false);
+        if (s.distance <= (float(steps) + 1.0) * step) {
+            return 1.0 - float(steps) / 10.0;
         }
+        position += min(s.distance, step);
     }
-    return 1.1 - distance;
+    return 0.0;
 }
 
 vec4 get_color(vec2 screenPosition, vec3 position, vec3 rotation) {
@@ -192,7 +222,7 @@ vec4 get_color(vec2 screenPosition, vec3 position, vec3 rotation) {
     vec3 color = vec3(1.0, 1.0, 1.0);
     int steps = 1;
     for (; steps < RAY_STEPS_MAX; steps++) {
-        SDFSample s = sdf(position);
+        SDFSample s = sdf(position, false);
         float distance = s.distance;
         if (distance < SDF_SURFACE_THRESHOLD) {
             hit = true;
@@ -207,7 +237,7 @@ vec4 get_color(vec2 screenPosition, vec3 position, vec3 rotation) {
     if (hit) {
         float fog = get_fog(originalPosition, position);
         float brightness = get_brightness(position, normal, fog);
-        float ambientOcclusion = pow(get_ambient_occlusion(position, normal), 4.0) * 0.2;
+        float ambientOcclusion = get_ambient_occlusion(position, normal) * 0.05;
         return vec4(color * brightness * fog - ambientOcclusion, 1.0);
     } else {
         return vec4(0.0, 0.0, 0.0, 1.0);
