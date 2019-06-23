@@ -196,6 +196,7 @@ IF NOT DEFINED QUIET echo COMPILE-INFO: Game compiled into an executable in: !OU
 REM Copy resources
 IF EXIST "sdf_shader.glsl" del sdf_shader.glsl
 cp !ROOT_DIR!\src\sdf_shader.glsl sdf_shader.glsl
+IF NOT EXIST "open_sans.ttf" cp !ROOT_DIR!\vendor\open-sans\open_sans.ttf open_sans.ttf
 IF NOT DEFINED QUIET echo COMPILE-INFO: Game resources copied into: !OUTPUT_DIR!\
 
 REM Run upx

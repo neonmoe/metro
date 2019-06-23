@@ -18,20 +18,32 @@
 #include "raylib.h"
 #include "raymath.h"
 #include "math.h"
+#include "script.h"
 
-const int VIRTUAL_SCREEN_HEIGHT = 240;
+const int VIRTUAL_SCREEN_HEIGHT = 128;
+
 const float WALK_SPEED = 1.4;
-const float HEAD_BOB_MAGNITUDE = 0.03;
+const float HEAD_BOB_MAGNITUDE = 0.05;
 const float HEAD_BOB_FREQUENCY = 1.6;
+const float NARRATION_GAP_LENGTH = 28.0;
+
+const float SUBTITLE_DURATION = 6.0;
 
 Rectangle GetRenderSrc(int screenWidth, int screenHeight);
 Rectangle GetRenderDest(int screenWidth, int screenHeight);
 
 int main(void) {
+    // Player values
     float cameraPosition[] = { 0.0, 1.75, 0.0 };
     float cameraRotation[] = { 0.0, 0.0, 0.0 };
     float walkingTime = 0.0;
     float headBobAmount = 0.0;
+    bool autoMove = false;
+
+    // Progress values
+    int lightsStage = 0;
+    int narrationStage = -1;
+    float narrationTime = 0.0;
 
     // Runtime configurable options
     float bobbingIntensity = 1.0;
@@ -47,10 +59,13 @@ int main(void) {
     // ("you seem to be missing sdf_shader.glsl! It should've come
     // with the download." or something)
 
+    Font mainFont = LoadFontEx("open_sans.ttf", 72, 0, 0);
+
     Shader sdfShader = LoadShader(0, "sdf_shader.glsl");
     int resolutionLocation = GetShaderLocation(sdfShader, "resolution");
     int cameraPositionLocation = GetShaderLocation(sdfShader, "cameraPosition");
     int cameraRotationLocation = GetShaderLocation(sdfShader, "cameraRotation");
+    int lightsStageLocation = GetShaderLocation(sdfShader, "stage");
 
     RenderTexture2D targetTex = LoadRenderTexture(VIRTUAL_SCREEN_HEIGHT * 2,
                                                   VIRTUAL_SCREEN_HEIGHT);
@@ -98,29 +113,41 @@ int main(void) {
 
         // Walk
         float r = cameraRotation[1] * DEG2RAD;
-        bool walking = false;
+        bool walking = autoMove;
+        if (IsKeyPressed(KEY_Q)) {
+            autoMove = true;
+        }
+        if (autoMove) {
+            cameraPosition[0] += delta * WALK_SPEED * sinf(r);
+            cameraPosition[2] += delta * WALK_SPEED * cosf(r);
+        }
         if (IsKeyDown(KEY_W)) {
             cameraPosition[0] += delta * WALK_SPEED * sinf(r);
             cameraPosition[2] += delta * WALK_SPEED * cosf(r);
             walking = true;
+            autoMove = false;
         }
         if (IsKeyDown(KEY_S)) {
             cameraPosition[0] -= delta * WALK_SPEED * sinf(r);
             cameraPosition[2] -= delta * WALK_SPEED * cosf(r);
             walking = true;
+            autoMove = false;
         }
         if (IsKeyDown(KEY_D)) {
             cameraPosition[0] += delta * WALK_SPEED * cosf(r);
             cameraPosition[2] += delta * WALK_SPEED * -sinf(r);
             walking = true;
+            autoMove = false;
         }
         if (IsKeyDown(KEY_A)) {
             cameraPosition[0] -= delta * WALK_SPEED * cosf(r);
             cameraPosition[2] -= delta * WALK_SPEED * -sinf(r);
             walking = true;
+            autoMove = false;
         }
-        cameraPosition[0] = Clamp(cameraPosition[0], -2.0, 2.0);
-        cameraPosition[2] = Clamp(cameraPosition[2], -10.0, 100.0);
+        cameraPosition[0] = Clamp(cameraPosition[0], -1.9, 1.9);
+        cameraPosition[2] = Clamp(cameraPosition[2], -10.0,
+                                  NARRATION_GAP_LENGTH * NARRATOR_COMMENTS_COUNT + 10.0);
         if (walking) {
             walkingTime += delta;
         } else {
@@ -138,12 +165,24 @@ int main(void) {
         }
         cameraPosition[1] += headBobAmount;
 
+        // Activate location-based actions
+        // TODO: Limit the lights to where the player can't move forward anywhere
+        // Also add like a fence or something there.
+        if (cameraPosition[2] + (int)(cameraPosition[2] * 4.1) % 14 - 7 > (lightsStage + 1) * 9) {
+            lightsStage++;
+        }
+        if (cameraPosition[2] > (narrationStage + 1) * NARRATION_GAP_LENGTH + 6) {
+            narrationStage++;
+            narrationTime = 0.0;
+        }
+
         BeginDrawing();
         ClearBackground(BLACK);
 
         // Upload uniforms
         SetShaderValue(sdfShader, cameraPositionLocation, cameraPosition, UNIFORM_VEC3);
         SetShaderValue(sdfShader, cameraRotationLocation, cameraRotation, UNIFORM_VEC3);
+        SetShaderValue(sdfShader, lightsStageLocation, &lightsStage, UNIFORM_INT);
 
         // Draw the scene (to the render texture)
         BeginTextureMode(targetTex);
@@ -161,12 +200,24 @@ int main(void) {
                        GetRenderDest(screenWidth, screenHeight),
                        (Vector2){0.0, 0.0}, 0.0, WHITE);
 
+        // Narration text display
+        narrationTime += delta;
+        int lineIndex = narrationTime / SUBTITLE_DURATION;
+        if (narrationTime / SUBTITLE_DURATION - lineIndex < 0.9 && // Silence between lines
+            lineIndex >= 0 && lineIndex < NARRATOR_LINES_PER_COMMENT && // LineIndex is  valid
+            narrationStage >= 0 && narrationStage < NARRATOR_COMMENTS_COUNT) { // NarrationStage is valid
+            DrawTextEx(mainFont, narratorComments[narrationStage][lineIndex],
+                       (Vector2){25.0, screenHeight - 20.0 - screenWidth / 30.0},
+                       screenWidth / 30.0, 0.0, YELLOW);
+        }
+
         EndDrawing();
     }
 
     UnloadRenderTexture(targetTex);
     UnloadTexture(targetTex.texture);
     UnloadShader(sdfShader);
+    UnloadFont(mainFont);
 
     CloseWindow();
     return 0;

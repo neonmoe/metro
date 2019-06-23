@@ -18,8 +18,8 @@
 #version 120
 
 // Ray marching variables (affect performance a lot)
-#define RAY_STEPS_MAX 100
-#define SDF_SURFACE_THRESHOLD 0.005
+#define RAY_STEPS_MAX 128
+#define SDF_SURFACE_THRESHOLD 0.006
 
 // 3D environment defining variables
 // TODO: Make a better palette
@@ -51,10 +51,7 @@ uniform vec2 resolution;
 uniform vec3 cameraPosition;
 uniform vec3 cameraRotation;
 
-uniform Light lights[LIGHTS_COUNT] =
-    Light[LIGHTS_COUNT](Light(vec3(-1.8, 3.6, 3.5), 6.0));
-
-uniform int enabledLight = 0;
+uniform int stage = 0;
 
 /* SDFs: https://www.iquilezles.org/www/articles/distfunctions/distfunctions.htm */
 
@@ -76,7 +73,7 @@ SDFSample sdfRails(vec3 samplePos) {
     vec3 period = vec3(0.0, 0.0, 1.0);
     vec3 repeatedSample = mod(samplePos, period) - 0.5 * period;
     repeatedSample.x = abs(repeatedSample.x);
-    float distance = sdfBox(repeatedSample, vec3(0.762, 0.18, 0.0), vec3(0.07, 0.1, 0.5));
+    float distance = sdfBox(repeatedSample, vec3(0.762, 0.2, 0.0), vec3(0.07, 0.1, 0.5));
     return SDFSample(distance, COLOR_RAIL);
 }
 
@@ -97,10 +94,10 @@ SDFSample sdfRailPlanks(vec3 samplePos) {
 }
 
 SDFSample sdfLightMeshes(vec3 samplePos) {
-    vec3 period = vec3(0.0, 0.0, 5.0);
+    vec3 period = vec3(0.0, 0.0, 9.0);
     vec3 repeatedSample = mod(samplePos, period) - 0.5 * period;
-    float distance = sdfBox(repeatedSample, vec3(-1.8, 3.6, 1.0), vec3(0.2, 0.2, 0.3));
-    if (floor(samplePos.z / 5.0) == enabledLight) {
+    float distance = sdfBox(repeatedSample, vec3(-1.8, 3.6, -1.0), vec3(0.2, 0.2, 0.3));
+    if (abs(floor(samplePos.z / 9.0) - stage) <= 1) {
         return SDFSample(distance, COLOR_LIGHT_ON);
     } else {
         return SDFSample(distance, COLOR_LIGHT_OFF);
@@ -145,7 +142,7 @@ vec4 rotate_y(vec4 direction, float degrees) {
 }
 
 float get_fog(vec3 cam, vec3 position) {
-    return min(1.0, pow(5.0 / length(cam - position), 1.5));
+    return min(1.0, pow(15.0 / length(cam - position), 1.5));
 }
 
 vec3 get_normal(vec3 samplePos) {
@@ -162,15 +159,15 @@ float get_shadow(vec3 samplePos, vec3 lightPos) {
     vec3 direction = normalize(lightPos - samplePos);
     vec3 position = samplePos + direction * 0.2;
     int steps = 1;
-    for (; steps < 100; steps++) {
+    for (; steps < 15; steps++) {
         SDFSample s = sdf(position, true);
         float maxDistance = length(lightPos - position);
         if (s.distance > maxDistance) {
-            return 0.0;
+            break;
         }
 
         if (s.distance < SDF_SURFACE_THRESHOLD) {
-            return 1.0;
+            return 1.0 - pow(float(steps) / 15.0, 1.5);
         } else {
             position += direction * s.distance;
         }
@@ -183,12 +180,12 @@ float get_shadow(vec3 samplePos, vec3 lightPos) {
 float get_brightness(vec3 samplePos, vec3 normal, float fog) {
     float ambient = 0.1;
     float diffuse = 0.0;
-    for (int i = 0; i < LIGHTS_COUNT; i++) {
-        Light light = lights[i];
+    for (int i = stage - 1; i <= stage + 1; i++) {
+        Light light = Light(vec3(-1.8, 3.6, 3.5 + 9.0 * float(i)), 10.0);
         vec3 lightDir = light.position - samplePos;
         diffuse += pow(1.0 - max(0.0, min(1.0, length(lightDir) / light.distance)), 0.5) *
             max(0.0, dot(normal, normalize(lightDir))) *
-            (1.0 - get_shadow(samplePos, light.position)) * 0.35;
+            (1.0 - get_shadow(samplePos, light.position) * 0.75) * 0.35;
     }
     return min(1.0, diffuse) + ambient;
 }
@@ -237,8 +234,8 @@ vec4 get_color(vec2 screenPosition, vec3 position, vec3 rotation) {
     if (hit) {
         float fog = get_fog(originalPosition, position);
         float brightness = get_brightness(position, normal, fog);
-        float ambientOcclusion = get_ambient_occlusion(position, normal) * 0.05;
-        return vec4(color * brightness * fog - ambientOcclusion, 1.0);
+        float ambientOcclusion = 1.0 - get_ambient_occlusion(position, normal) * 0.5;
+        return vec4(color * brightness * fog * ambientOcclusion, 1.0);
     } else {
         return vec4(0.0, 0.0, 0.0, 1.0);
     }
