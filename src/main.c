@@ -19,7 +19,10 @@
 #include "raymath.h"
 #include "math.h"
 
-const int VIRTUAL_SCREEN_HEIGHT = 225;
+const int VIRTUAL_SCREEN_HEIGHT = 240;
+const float WALK_SPEED = 1.4;
+const float HEAD_BOB_MAGNITUDE = 0.03;
+const float HEAD_BOB_FREQUENCY = 1.6;
 
 Rectangle GetRenderSrc(int screenWidth, int screenHeight);
 Rectangle GetRenderDest(int screenWidth, int screenHeight);
@@ -27,9 +30,14 @@ Rectangle GetRenderDest(int screenWidth, int screenHeight);
 int main(void) {
     float cameraPosition[] = { 0.0, 1.75, 0.0 };
     float cameraRotation[] = { 0.0, 0.0, 0.0 };
+    float walkingTime = 0.0;
+    float headBobAmount = 0.0;
+
+    // Runtime configurable options
+    float bobbingIntensity = 1.0;
 
     SetConfigFlags(FLAG_VSYNC_HINT | FLAG_WINDOW_RESIZABLE);
-    InitWindow(800, 450, "HEL Underground");
+    InitWindow(640, 480, "HEL Underground");
 
     // TODO: For Raspberry Pi compatibility, add OpenGL ES version of the shader
     // (it's probably enough to just load the shaders and switch
@@ -55,6 +63,14 @@ int main(void) {
         float delta = currentTime - lastTime;
         lastTime = currentTime;
 
+        // Configuration keys
+        if (IsKeyPressed(KEY_B)) {
+            // Toggle bobbing
+            bobbingIntensity = bobbingIntensity > 0.5 ? 0.0 : 1.0;
+        }
+
+        // Turn around
+        // TODO: Mouselook
         if (IsKeyDown(KEY_LEFT)) {
             cameraRotation[1] -= delta * 120.0;
             if (cameraRotation[1] < 0.0) {
@@ -68,24 +84,39 @@ int main(void) {
             }
         }
 
+        // Walk
         float r = cameraRotation[1] * DEG2RAD;
+        bool walking = false;
         if (IsKeyDown(KEY_W)) {
-            cameraPosition[0] += delta * 2.0 * sinf(r);
-            cameraPosition[2] += delta * 2.0 * cosf(r);
+            cameraPosition[0] += delta * WALK_SPEED * sinf(r);
+            cameraPosition[2] += delta * WALK_SPEED * cosf(r);
+            walking = true;
         }
         if (IsKeyDown(KEY_S)) {
-            cameraPosition[0] -= delta * 2.0 * sinf(r);
-            cameraPosition[2] -= delta * 2.0 * cosf(r);
+            cameraPosition[0] -= delta * WALK_SPEED * sinf(r);
+            cameraPosition[2] -= delta * WALK_SPEED * cosf(r);
+            walking = true;
         }
         if (IsKeyDown(KEY_D)) {
-            cameraPosition[0] += delta * 2.0 * cosf(r);
-            cameraPosition[2] += delta * 2.0 * -sinf(r);
+            cameraPosition[0] += delta * WALK_SPEED * cosf(r);
+            cameraPosition[2] += delta * WALK_SPEED * -sinf(r);
+            walking = true;
         }
         if (IsKeyDown(KEY_A)) {
-            cameraPosition[0] -= delta * 2.0 * cosf(r);
-            cameraPosition[2] -= delta * 2.0 * -sinf(r);
+            cameraPosition[0] -= delta * WALK_SPEED * cosf(r);
+            cameraPosition[2] -= delta * WALK_SPEED * -sinf(r);
+            walking = true;
+        }
+        if (walking) {
+            walkingTime += delta;
+        } else {
+            walkingTime = 0;
         }
 
+        headBobAmount = Lerp(headBobAmount, sinf(walkingTime * 6.28 * HEAD_BOB_FREQUENCY) *
+                             HEAD_BOB_MAGNITUDE * bobbingIntensity, 10.0 * delta);
+
+        // Crouch
         if (IsKeyDown(KEY_LEFT_CONTROL)) {
             cameraPosition[1] = Lerp(cameraPosition[1], 0.9, 10.0 * delta);
         } else {
@@ -95,9 +126,13 @@ int main(void) {
         BeginDrawing();
         ClearBackground(BLACK);
 
+        // Upload uniforms
+        cameraPosition[1] += headBobAmount;
         SetShaderValue(sdfShader, cameraPositionLocation, cameraPosition, UNIFORM_VEC3);
+        cameraPosition[1] -= headBobAmount;
         SetShaderValue(sdfShader, cameraRotationLocation, cameraRotation, UNIFORM_VEC3);
 
+        // Draw the scene (to the render texture)
         BeginTextureMode(targetTex);
         BeginShaderMode(sdfShader);
         DrawRectangle(0, 0, VIRTUAL_SCREEN_HEIGHT * 2, VIRTUAL_SCREEN_HEIGHT,
@@ -105,6 +140,7 @@ int main(void) {
         EndShaderMode();
         EndTextureMode();
 
+        // Draw the render texture to the screen
         int screenWidth = GetScreenWidth();
         int screenHeight = GetScreenHeight();
         DrawTexturePro(targetTex.texture,

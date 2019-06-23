@@ -1,6 +1,13 @@
 # untitled
 Haven't named this project yet.
 
+### Controls
+- WASD to move
+- Arrow keys to look around
+
+#### Configuration keys
+- B to toggle head bobbing animation
+
 ### Building
 Just run the script relevant to your operating system. If it doesn't
 work, refer to the documentation of
