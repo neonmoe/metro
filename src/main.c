@@ -115,7 +115,7 @@ int main(void) {
         float r = cameraRotation[1] * DEG2RAD;
         bool walking = autoMove;
         if (IsKeyPressed(KEY_Q)) {
-            autoMove = true;
+            autoMove = !autoMove;
         }
         if (autoMove) {
             cameraPosition[0] += delta * WALK_SPEED * sinf(r);

@@ -74,7 +74,9 @@ SDFSample sdfRails(vec3 samplePos) {
     vec3 repeatedSample = mod(samplePos, period) - 0.5 * period;
     repeatedSample.x = abs(repeatedSample.x);
     float distance = sdfBox(repeatedSample, vec3(0.762, 0.2, 0.0), vec3(0.07, 0.1, 0.5));
-    return SDFSample(distance, COLOR_RAIL);
+    float subDistance = min(sdfBox(repeatedSample, vec3(0.762 - 0.07, 0.2, 0.0), vec3(0.05, 0.06, 0.5)),
+                            sdfBox(repeatedSample, vec3(0.762 + 0.07, 0.2, 0.0), vec3(0.05, 0.06, 0.5)));
+    return SDFSample(distance + max(0.0, -subDistance), COLOR_RAIL);
 }
 
 SDFSample sdfTunnel(vec3 samplePos) {
