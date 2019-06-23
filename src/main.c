@@ -119,29 +119,30 @@ int main(void) {
             cameraPosition[2] -= delta * WALK_SPEED * -sinf(r);
             walking = true;
         }
+        cameraPosition[0] = Clamp(cameraPosition[0], -2.0, 2.0);
+        cameraPosition[2] = Clamp(cameraPosition[2], -10.0, 100.0);
         if (walking) {
             walkingTime += delta;
         } else {
             walkingTime = 0;
         }
 
+        // Crouch and bob
+        cameraPosition[1] -= headBobAmount;
         headBobAmount = Lerp(headBobAmount, sinf(walkingTime * 6.28 * HEAD_BOB_FREQUENCY) *
                              HEAD_BOB_MAGNITUDE * bobbingIntensity, 10.0 * delta);
-
-        // Crouch
         if (IsKeyDown(KEY_LEFT_CONTROL)) {
             cameraPosition[1] = Lerp(cameraPosition[1], 0.9, 10.0 * delta);
         } else {
             cameraPosition[1] = Lerp(cameraPosition[1], 1.75, 10.0 * delta);
         }
+        cameraPosition[1] += headBobAmount;
 
         BeginDrawing();
         ClearBackground(BLACK);
 
         // Upload uniforms
-        cameraPosition[1] += headBobAmount;
         SetShaderValue(sdfShader, cameraPositionLocation, cameraPosition, UNIFORM_VEC3);
-        cameraPosition[1] -= headBobAmount;
         SetShaderValue(sdfShader, cameraRotationLocation, cameraRotation, UNIFORM_VEC3);
 
         // Draw the scene (to the render texture)
