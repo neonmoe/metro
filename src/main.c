@@ -83,6 +83,18 @@ int main(void) {
                 cameraRotation[1] -= 360;
             }
         }
+        if (IsKeyDown(KEY_UP)) {
+            cameraRotation[0] -= delta * 90.0;
+            if (cameraRotation[0] < -90.0) {
+                cameraRotation[0] = -90.0;
+            }
+        }
+        if (IsKeyDown(KEY_DOWN)) {
+            cameraRotation[0] += delta * 90.0;
+            if (cameraRotation[0] > 90.0) {
+                cameraRotation[0] = 90.0;
+            }
+        }
 
         // Walk
         float r = cameraRotation[1] * DEG2RAD;

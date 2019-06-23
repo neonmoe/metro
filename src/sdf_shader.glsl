@@ -105,6 +105,7 @@ float get_brightness(vec3 samplePos, vec3 normal, float fog) {
     return min(1.0, diffuse) + ambient;
 }
 
+// TODO: Improve the AO algorithm, it's a bit dumb currently
 float get_ambient_occlusion(vec3 samplePos, vec3 normal) {
     vec3 step = normal * 0.25;
     float distance = 0.1;
