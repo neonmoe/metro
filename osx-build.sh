@@ -151,6 +151,7 @@ rm *.o
 [ -f "sdf_shader.glsl" ] && rm sdf_shader.glsl
 cp $ROOT_DIR/src/sdf_shader.glsl sdf_shader.glsl
 [ ! -f "open_sans.ttf" ] && cp $ROOT_DIR/vendor/open-sans/open_sans.ttf open_sans.ttf
+[ ! -f "vt323.ttf" ] && cp $ROOT_DIR/vendor/vt323/vt323.ttf vt323.ttf
 [ -z "$QUIET" ] && echo "COMPILE-INFO: Game resources copied into: $OUTPUT_DIR/"
 
 if [ -n "$STRIP_IT" ]; then

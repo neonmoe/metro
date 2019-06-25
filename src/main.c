@@ -59,7 +59,7 @@ int main(void) {
     // ("you seem to be missing sdf_shader.glsl! It should've come
     // with the download." or something)
 
-    Font mainFont = LoadFontEx("open_sans.ttf", 72, 0, 0);
+    Font mainFont = LoadFontEx("vt323.ttf", 72, 0, 0);
 
     Shader sdfShader = LoadShader(0, "sdf_shader.glsl");
     int resolutionLocation = GetShaderLocation(sdfShader, "resolution");

@@ -75,7 +75,13 @@ while getopts ":hdusrcq" opt; do
 done
 
 # Set CC if it's not set already
-CC=x86_64-w64-mingw32-gcc
+if command -v x86_64-w64-mingw32-gcc > /dev/null 2>&1; then
+    CC=x86_64-w64-mingw32-gcc
+else
+    if [ -z "$CC" ]; then
+        CC=gcc
+    fi
+fi
 
 # Directories
 ROOT_DIR=$PWD
@@ -147,6 +153,7 @@ rm *.o
 [ -f "sdf_shader.glsl" ] && rm sdf_shader.glsl
 cp $ROOT_DIR/src/sdf_shader.glsl sdf_shader.glsl
 [ ! -f "open_sans.ttf" ] && cp $ROOT_DIR/vendor/open-sans/open_sans.ttf open_sans.ttf
+[ ! -f "vt323.ttf" ] && cp $ROOT_DIR/vendor/vt323/vt323.ttf vt323.ttf
 [ -z "$QUIET" ] && echo "COMPILE-INFO: Game resources copied into: $OUTPUT_DIR/"
 
 if [ -n "$STRIP_IT" ]; then
