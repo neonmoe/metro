@@ -20,7 +20,7 @@
 #include "math.h"
 #include "script.h"
 
-const int VIRTUAL_SCREEN_HEIGHT = 128;
+const int VIRTUAL_SCREEN_HEIGHT = 256;
 
 const float WALK_SPEED = 1.4;
 const float HEAD_BOB_MAGNITUDE = 0.05;
@@ -31,6 +31,7 @@ const float SUBTITLE_DURATION = 6.0;
 
 Rectangle GetRenderSrc(int screenWidth, int screenHeight);
 Rectangle GetRenderDest(int screenWidth, int screenHeight);
+float NoiseifyPosition(float position);
 
 int main(void) {
     // Player values
@@ -145,9 +146,9 @@ int main(void) {
             walking = true;
             autoMove = false;
         }
+        float maxDistance = NARRATION_GAP_LENGTH * NARRATOR_COMMENTS_COUNT;
         cameraPosition[0] = Clamp(cameraPosition[0], -1.9, 1.9);
-        cameraPosition[2] = Clamp(cameraPosition[2], -10.0,
-                                  NARRATION_GAP_LENGTH * NARRATOR_COMMENTS_COUNT + 10.0);
+        cameraPosition[2] = Clamp(cameraPosition[2], -10.0, maxDistance + 10.0);
         if (walking) {
             walkingTime += delta;
         } else {
@@ -156,8 +157,9 @@ int main(void) {
 
         // Crouch and bob
         cameraPosition[1] -= headBobAmount;
-        headBobAmount = Lerp(headBobAmount, sinf(walkingTime * 6.28 * HEAD_BOB_FREQUENCY) *
-                             HEAD_BOB_MAGNITUDE * bobbingIntensity, 10.0 * delta);
+        float targetBob = sinf(walkingTime * 6.28 * HEAD_BOB_FREQUENCY) *
+            HEAD_BOB_MAGNITUDE * bobbingIntensity;
+        headBobAmount = Lerp(headBobAmount, targetBob, 10.0 * delta);
         if (IsKeyDown(KEY_LEFT_CONTROL)) {
             cameraPosition[1] = Lerp(cameraPosition[1], 0.9, 10.0 * delta);
         } else {
@@ -167,8 +169,10 @@ int main(void) {
 
         // Activate location-based actions
         // TODO: Add a fence or something at the end.
-        if (Clamp(cameraPosition[2] + (int)(cameraPosition[2] * 4.1) % 14 - 7,
-                  0, NARRATOR_COMMENTS_COUNT * NARRATION_GAP_LENGTH - 9) > (lightsStage + 1) * 9) {
+        float lightMaxDistance = maxDistance - 9;
+        float triggerPosition = Clamp(NoiseifyPosition(cameraPosition[2]),
+                                      0, lightMaxDistance);
+        if (triggerPosition > (lightsStage + 1) * 9) {
             lightsStage++;
         }
         if (cameraPosition[2] > (narrationStage + 1) * NARRATION_GAP_LENGTH + 6) {
@@ -251,4 +255,8 @@ Rectangle GetRenderDest(int screenWidth, int screenHeight) {
         return (Rectangle){margin, 0,
                 screenHeight * 2, screenHeight};
     }
+}
+
+float NoiseifyPosition(float position) {
+    return position + (int)(position * 4.1) % 14 - 7;
 }

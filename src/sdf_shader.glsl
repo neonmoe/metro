@@ -20,14 +20,15 @@
 // Ray marching variables (affect performance a lot)
 #define RAY_STEPS_MAX 128
 #define SDF_SURFACE_THRESHOLD 0.006
+#define NORMAL_EPSILON 0.001
 
 // 3D environment defining variables
 // TODO: Make a better palette
-#define COLOR_LIGHT_ON vec3(4.0, 4.0, 4.0)
-#define COLOR_LIGHT_OFF vec3(1.0, 1.0, 1.0)
-#define COLOR_WOOD vec3(0.6, 0.4, 0.05)
-#define COLOR_RAIL vec3(0.6, 0.6, 0.75)
-#define COLOR_TUNNEL vec3(0.6, 0.554, 0.5)
+#define COLOR_LIGHT_OFF vec3(141.0 / 255.0, 189.0 / 255.0, 168.0 / 255.0)
+#define COLOR_LIGHT_ON (COLOR_LIGHT_OFF * 5.0)
+#define COLOR_WOOD vec3(184.0 / 255.0, 140.0 / 255.0, 90.0 / 255.0)
+#define COLOR_RAIL vec3(126.0 / 255.0, 123.0 / 255.0, 134.0 / 255.0)
+#define COLOR_TUNNEL vec3(113.0 / 255.0, 113.0 / 255.0, 99.0 / 255.0)
 
 struct Camera {
     vec3 position;
@@ -126,18 +127,22 @@ SDFSample sdf(vec3 samplePos, bool ignoreLightMeshes) {
 
 vec4 rotate_x(vec4 direction, float degrees) {
     float r = radians(degrees);
+    float c = cos(r);
+    float s = sin(r);
     mat4 transform = mat4(vec4(1.0, 0.0, 0.0, 0.0),
-                          vec4(0.0, cos(r), sin(r), 0.0),
-                          vec4(0.0, -sin(r), cos(r), 0.0),
+                          vec4(0.0, c, s, 0.0),
+                          vec4(0.0, -s, c, 0.0),
                           vec4(0.0, 0.0, 0.0, 1.0));
     return transform * direction;
 }
 
 vec4 rotate_y(vec4 direction, float degrees) {
     float r = radians(degrees);
-    mat4 transform = mat4(vec4(cos(r), 0.0, -sin(r), 0.0),
+    float c = cos(r);
+    float s = sin(r);
+    mat4 transform = mat4(vec4(c, 0.0, -s, 0.0),
                           vec4(0.0, 1.0, 0.0, 0.0),
-                          vec4(sin(r), 0.0, cos(r), 0.0),
+                          vec4(s, 0.0, c, 0.0),
                           vec4(0.0, 0.0, 0.0, 1.0));
     return transform * direction;
 }
@@ -147,12 +152,12 @@ float get_fog(vec3 cam, vec3 position) {
 }
 
 vec3 get_normal(vec3 samplePos) {
-    float x = sdf(samplePos + vec3(SDF_SURFACE_THRESHOLD, 0.0, 0.0), false).distance -
-        sdf(samplePos - vec3(SDF_SURFACE_THRESHOLD, 0.0, 0.0), false).distance;
-    float y = sdf(samplePos + vec3(0.0, SDF_SURFACE_THRESHOLD, 0.0), false).distance -
-        sdf(samplePos - vec3(0.0, SDF_SURFACE_THRESHOLD, 0.0), false).distance;
-    float z = sdf(samplePos + vec3(0.0, 0.0, SDF_SURFACE_THRESHOLD), false).distance -
-        sdf(samplePos - vec3(0.0, 0.0, SDF_SURFACE_THRESHOLD), false).distance;
+    float x = sdf(samplePos + vec3(NORMAL_EPSILON, 0.0, 0.0), false).distance -
+        sdf(samplePos - vec3(NORMAL_EPSILON, 0.0, 0.0), false).distance;
+    float y = sdf(samplePos + vec3(0.0, NORMAL_EPSILON, 0.0), false).distance -
+        sdf(samplePos - vec3(0.0, NORMAL_EPSILON, 0.0), false).distance;
+    float z = sdf(samplePos + vec3(0.0, 0.0, NORMAL_EPSILON), false).distance -
+        sdf(samplePos - vec3(0.0, 0.0, NORMAL_EPSILON), false).distance;
     return normalize(vec3(x, y, z));
 }
 
