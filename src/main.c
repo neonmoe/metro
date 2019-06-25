@@ -166,9 +166,9 @@ int main(void) {
         cameraPosition[1] += headBobAmount;
 
         // Activate location-based actions
-        // TODO: Limit the lights to where the player can't move forward anywhere
-        // Also add like a fence or something there.
-        if (cameraPosition[2] + (int)(cameraPosition[2] * 4.1) % 14 - 7 > (lightsStage + 1) * 9) {
+        // TODO: Add a fence or something at the end.
+        if (Clamp(cameraPosition[2] + (int)(cameraPosition[2] * 4.1) % 14 - 7,
+                  0, NARRATOR_COMMENTS_COUNT * NARRATION_GAP_LENGTH - 9) > (lightsStage + 1) * 9) {
             lightsStage++;
         }
         if (cameraPosition[2] > (narrationStage + 1) * NARRATION_GAP_LENGTH + 6) {
@@ -206,9 +206,16 @@ int main(void) {
         if (narrationTime / SUBTITLE_DURATION - lineIndex < 0.9 && // Silence between lines
             lineIndex >= 0 && lineIndex < NARRATOR_LINES_PER_COMMENT && // LineIndex is  valid
             narrationStage >= 0 && narrationStage < NARRATOR_COMMENTS_COUNT) { // NarrationStage is valid
-            DrawTextEx(mainFont, narratorComments[narrationStage][lineIndex],
-                       (Vector2){25.0, screenHeight - 20.0 - screenWidth / 30.0},
-                       screenWidth / 30.0, 0.0, YELLOW);
+            float fontSize = screenWidth / 25.0;
+            const char *line = narratorComments[narrationStage][lineIndex];
+            Vector2 size = MeasureTextEx(mainFont, line, fontSize, 0.0);
+            Vector2 position = { (screenWidth - size.x) / 2.0,
+                                 screenHeight * 0.9 - fontSize };
+            DrawTextEx(mainFont, line, position, fontSize, 0.0, YELLOW);
+        }
+
+        if (IsKeyDown(KEY_F3)) {
+            DrawFPS(50, 50);
         }
 
         EndDrawing();

@@ -23,7 +23,6 @@
 
 // 3D environment defining variables
 // TODO: Make a better palette
-#define LIGHTS_COUNT 1
 #define COLOR_LIGHT_ON vec3(4.0, 4.0, 4.0)
 #define COLOR_LIGHT_OFF vec3(1.0, 1.0, 1.0)
 #define COLOR_WOOD vec3(0.6, 0.4, 0.05)
@@ -248,7 +247,7 @@ void main() {
 
     // NOTE: The y coordinate is flipped because we're rendering to a render texture
     vec2 pixelCoords = vec2((gl_FragCoord.x - resolution.x / 2.0) / resolution.y,
-                            (gl_FragCoord.y / resolution.y - 0.5) * -1.0);
+                            (gl_FragCoord.y - resolution.y / 2.0) / resolution.y * -1.0);
 
     // TODO: Switch to render textures for lowering the resolution
 
