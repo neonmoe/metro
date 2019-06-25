@@ -21,7 +21,7 @@
 #ifndef NARRATOR_SCRIPT_H
 #define NARRATOR_SCRIPT_H
 
-#define COMMENTS_COUNT 13
+#define COMMENTS_COUNT 14
 #define COMMENT_LINES 3
 
 const char *narratorComments[COMMENTS_COUNT][COMMENT_LINES] = {
@@ -43,13 +43,16 @@ const char *narratorComments[COMMENTS_COUNT][COMMENT_LINES] = {
      ""},
     {"", "", ""},
     {"Want to hear a surprising fact?",
-     "A big part of the metro line is not underground.",
+     "A big part of the Helsinki metro is not underground.",
      "Shocking, I know."},
-    {"Based on the Stockholm metro", "", ""},
+    {"I guess surface metros aren't all that uncommon though.",
+     "I think Stockholm has parts on the surface. And Berlin.",
+     "But especially in the case of Berlin, the name would be very misleading."},
     {"", "", ""},
     {"Just to clarify, what you're looking at isn't really the Helsinki metro.",
      "I couldn't actually find any blueprints, and only a few pictures.",
      "So this is just my artistic interpretation."},
+    {"", "", ""},
     {"And that's that for our public infrastructure appreciation walk.",
      "The next station is right up ahead, but that's off-limits for you.",
      "Thanks for walking the whole way, I wish you a good day."}
