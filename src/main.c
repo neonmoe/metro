@@ -25,7 +25,7 @@ const int VIRTUAL_SCREEN_HEIGHT = 256;
 const float WALK_SPEED = 1.4;
 const float HEAD_BOB_MAGNITUDE = 0.05;
 const float HEAD_BOB_FREQUENCY = 1.6;
-const float NARRATION_GAP_LENGTH = 28.0;
+const float COMMENT_LENGTH = 28.0;
 
 const float SUBTITLE_DURATION = 6.0;
 
@@ -41,6 +41,11 @@ int main(void) {
     float headBobAmount = 0.0;
     bool autoMove = false;
 
+    // Mouselook values
+    float mouseX = -1.0;
+    float mouseY = -1.0;
+    bool mouseLookEnabled = false;
+
     // Progress values
     int lightsStage = 0;
     int narrationStage = -1;
@@ -48,9 +53,11 @@ int main(void) {
 
     // Runtime configurable options
     float bobbingIntensity = 1.0;
+    Vector2 mouseSensitivity = (Vector2){150.0, 150.0};
 
     SetConfigFlags(FLAG_VSYNC_HINT | FLAG_WINDOW_RESIZABLE);
     InitWindow(640, 480, "HEL Underground");
+    SetExitKey(KEY_F4);
 
     // TODO: For Raspberry Pi compatibility, add OpenGL ES version of the shader
     // (it's probably enough to just load the shaders and switch
@@ -86,7 +93,6 @@ int main(void) {
         }
 
         // Turn around
-        // TODO: Mouselook
         if (IsKeyDown(KEY_LEFT)) {
             cameraRotation[1] -= delta * 120.0;
             if (cameraRotation[1] < 0.0) {
@@ -112,6 +118,29 @@ int main(void) {
             }
         }
 
+        // Mouselook
+        if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
+            mouseLookEnabled = true;
+            DisableCursor();
+        }
+        if (IsKeyPressed(KEY_ESCAPE)) {
+            mouseLookEnabled = false;
+            EnableCursor();
+        }
+        if (mouseLookEnabled && mouseX >= 0 && mouseY >= 0) {
+            float deltaX = (GetMouseX() - mouseX) /
+                GetScreenHeight() * mouseSensitivity.x;
+            float deltaY = (GetMouseY() - mouseY) /
+                GetScreenHeight() * mouseSensitivity.y;
+            mouseX = GetMouseX();
+            mouseY = GetMouseY();
+            cameraRotation[0] = Clamp(cameraRotation[0] + deltaY, -90.0, 90.0);
+            cameraRotation[1] += deltaX;
+        } else {
+            mouseX = GetMouseX();
+            mouseY = GetMouseY();
+        }
+
         // Walk
         float r = cameraRotation[1] * DEG2RAD;
         bool walking = autoMove;
@@ -122,31 +151,31 @@ int main(void) {
             cameraPosition[0] += delta * WALK_SPEED * sinf(r);
             cameraPosition[2] += delta * WALK_SPEED * cosf(r);
         }
-        if (IsKeyDown(KEY_W)) {
+        if (IsKeyDown(KEY_W) || IsKeyDown(KEY_I)) {
             cameraPosition[0] += delta * WALK_SPEED * sinf(r);
             cameraPosition[2] += delta * WALK_SPEED * cosf(r);
             walking = true;
             autoMove = false;
         }
-        if (IsKeyDown(KEY_S)) {
+        if (IsKeyDown(KEY_S) || IsKeyDown(KEY_K)) {
             cameraPosition[0] -= delta * WALK_SPEED * sinf(r);
             cameraPosition[2] -= delta * WALK_SPEED * cosf(r);
             walking = true;
             autoMove = false;
         }
-        if (IsKeyDown(KEY_D)) {
+        if (IsKeyDown(KEY_D) || IsKeyDown(KEY_L)) {
             cameraPosition[0] += delta * WALK_SPEED * cosf(r);
             cameraPosition[2] += delta * WALK_SPEED * -sinf(r);
             walking = true;
             autoMove = false;
         }
-        if (IsKeyDown(KEY_A)) {
+        if (IsKeyDown(KEY_A) || IsKeyDown(KEY_J)) {
             cameraPosition[0] -= delta * WALK_SPEED * cosf(r);
             cameraPosition[2] -= delta * WALK_SPEED * -sinf(r);
             walking = true;
             autoMove = false;
         }
-        float maxDistance = NARRATION_GAP_LENGTH * NARRATOR_COMMENTS_COUNT;
+        float maxDistance = COMMENT_LENGTH * COMMENTS_COUNT;
         cameraPosition[0] = Clamp(cameraPosition[0], -1.9, 1.9);
         cameraPosition[2] = Clamp(cameraPosition[2], -10.0, maxDistance + 10.0);
         if (walking) {
@@ -175,7 +204,7 @@ int main(void) {
         if (triggerPosition > (lightsStage + 1) * 9) {
             lightsStage++;
         }
-        if (cameraPosition[2] > (narrationStage + 1) * NARRATION_GAP_LENGTH + 6) {
+        if (cameraPosition[2] > (narrationStage + 1) * COMMENT_LENGTH + 6) {
             narrationStage++;
             narrationTime = 0.0;
         }
@@ -184,9 +213,12 @@ int main(void) {
         ClearBackground(BLACK);
 
         // Upload uniforms
-        SetShaderValue(sdfShader, cameraPositionLocation, cameraPosition, UNIFORM_VEC3);
-        SetShaderValue(sdfShader, cameraRotationLocation, cameraRotation, UNIFORM_VEC3);
-        SetShaderValue(sdfShader, lightsStageLocation, &lightsStage, UNIFORM_INT);
+        SetShaderValue(sdfShader, cameraPositionLocation,
+                       cameraPosition, UNIFORM_VEC3);
+        SetShaderValue(sdfShader, cameraRotationLocation,
+                       cameraRotation, UNIFORM_VEC3);
+        SetShaderValue(sdfShader, lightsStageLocation,
+                       &lightsStage, UNIFORM_INT);
 
         // Draw the scene (to the render texture)
         BeginTextureMode(targetTex);
@@ -207,13 +239,16 @@ int main(void) {
         // Narration text display
         narrationTime += delta;
         int lineIndex = narrationTime / SUBTITLE_DURATION;
-        if (narrationTime / SUBTITLE_DURATION - lineIndex < 0.9 && // Silence between lines
-            lineIndex >= 0 && lineIndex < NARRATOR_LINES_PER_COMMENT && // LineIndex is  valid
-            narrationStage >= 0 && narrationStage < NARRATOR_COMMENTS_COUNT) { // NarrationStage is valid
-            float fontSize = screenWidth / 25.0;
+        if (// Leave a break for the last 10% of the subtitle display time
+            narrationTime / SUBTITLE_DURATION - lineIndex < 0.9 &&
+            // LineIndex is within bounds
+            lineIndex >= 0 && lineIndex < COMMENT_LINES &&
+            // NarrationStage is within bounds
+            narrationStage >= 0 && narrationStage < COMMENTS_COUNT) {
+            float fontSize = screenHeight / 240.0 * 12.0;
             const char *line = narratorComments[narrationStage][lineIndex];
             Vector2 size = MeasureTextEx(mainFont, line, fontSize, 0.0);
-            Vector2 position = { (screenWidth - size.x) / 2.0,
+            Vector2 position = { (screenWidth - (size.x - fontSize)) / 2.0,
                                  screenHeight * 0.9 - fontSize };
             DrawTextEx(mainFont, line, position, fontSize, 0.0, YELLOW);
         }

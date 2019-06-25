@@ -126,7 +126,7 @@ set OUTPUT_DIR=builds\windows-msvc
 REM Debug changes to flags
 IF DEFINED BUILD_DEBUG (
   set OUTPUT_FLAG=/Fe: "!GAME_NAME!"
-  set COMPILATION_FLAGS=/Od /Zi
+  set COMPILATION_FLAGS=/Od /Zi /wd4204
   set WARNING_FLAGS=/Wall
   set SUBSYSTEM_FLAGS=
   set LINK_FLAGS=/link kernel32.lib user32.lib shell32.lib winmm.lib gdi32.lib opengl32.lib

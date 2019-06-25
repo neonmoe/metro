@@ -2,8 +2,8 @@
 Haven't named this project yet.
 
 ### Controls
-- WASD to move
-- Arrow keys to look around
+- WASD or IJKL to move
+- Arrow keys or mouse to look around
 
 #### Configuration keys
 - B to toggle head bobbing animation

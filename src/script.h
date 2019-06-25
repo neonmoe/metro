@@ -21,10 +21,10 @@
 #ifndef NARRATOR_SCRIPT_H
 #define NARRATOR_SCRIPT_H
 
-#define NARRATOR_COMMENTS_COUNT 8
-#define NARRATOR_LINES_PER_COMMENT 3
+#define COMMENTS_COUNT 13
+#define COMMENT_LINES 3
 
-const char *narratorComments[NARRATOR_COMMENTS_COUNT][NARRATOR_LINES_PER_COMMENT] = {
+const char *narratorComments[COMMENTS_COUNT][COMMENT_LINES] = {
     {"This is a metro tunnel under Helsinki.", "", ""},
     {"The Helsinki metro only has one fork and 25 stations,",
      "but the original plans were a bit more ambitious.",
@@ -37,7 +37,16 @@ const char *narratorComments[NARRATOR_COMMENTS_COUNT][NARRATOR_LINES_PER_COMMENT
     {"", "(reading wikipedia)", ""},
     {"After some reading, turns out that one new station has longer stairs.",
      "Never seen that specific escalator myself though.",
-     "That one is under water as well."},
+     ""},
+    {"That one is under water as well. Neat, right?",
+     "Must've been quite the engineering challenge.",
+     ""},
+    {"", "", ""},
+    {"Want to hear a surprising fact?",
+     "A big part of the metro line is not underground.",
+     "Shocking, I know."},
+    {"Based on the Stockholm metro", "", ""},
+    {"", "", ""},
     {"Just to clarify, what you're looking at isn't really the Helsinki metro.",
      "I couldn't actually find any blueprints, and only a few pictures.",
      "So this is just my artistic interpretation."},
