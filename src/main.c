@@ -22,12 +22,12 @@
 
 const int VIRTUAL_SCREEN_HEIGHT = 256;
 
-const float WALK_SPEED = 1.4;
-const float HEAD_BOB_MAGNITUDE = 0.05;
-const float HEAD_BOB_FREQUENCY = 1.6;
-const float COMMENT_LENGTH = 28.0;
+const float WALK_SPEED = 1.4f;
+const float HEAD_BOB_MAGNITUDE = 0.05f;
+const float HEAD_BOB_FREQUENCY = 1.6f;
+const float COMMENT_LENGTH = 28.0f;
 
-const float SUBTITLE_DURATION = 6.0;
+const float SUBTITLE_DURATION = 6.0f;
 
 Rectangle GetRenderSrc(int screenWidth, int screenHeight);
 Rectangle GetRenderDest(int screenWidth, int screenHeight);
@@ -35,25 +35,26 @@ float NoiseifyPosition(float position);
 
 int main(void) {
     // Player values
-    float cameraPosition[] = { 0.0, 1.75, 0.0 };
-    float cameraRotation[] = { 0.0, 0.0, 0.0 };
-    float walkingTime = 0.0;
-    float headBobAmount = 0.0;
+    float cameraPosition[] = { 0.0f, 1.75f, 0.0f };
+    float cameraRotation[] = { 0.0f, 0.0f, 0.0f };
+    float walkingTime = 0.0f;
+    float headBobAmount = 0.0f;
     bool autoMove = false;
 
     // Mouselook values
-    float mouseX = -1.0;
-    float mouseY = -1.0;
+    int mouseX = -1;
+    int mouseY = -1;
     bool mouseLookEnabled = false;
 
     // Progress values
     int lightsStage = 0;
     int narrationStage = -1;
-    float narrationTime = 0.0;
+    float narrationTime = 0.0f;
 
     // Runtime configurable options
-    float bobbingIntensity = 1.0;
-    Vector2 mouseSensitivity = (Vector2){150.0, 150.0};
+    float bobbingIntensity = 1.0f;
+    int mouseSpeedX = 150;
+    int mouseSpeedY = 150;
 
     SetConfigFlags(FLAG_VSYNC_HINT | FLAG_WINDOW_RESIZABLE);
     InitWindow(640, 480, "HEL Underground");
@@ -77,7 +78,8 @@ int main(void) {
 
     RenderTexture2D targetTex = LoadRenderTexture(VIRTUAL_SCREEN_HEIGHT * 2,
                                                   VIRTUAL_SCREEN_HEIGHT);
-    float resolution[] = { VIRTUAL_SCREEN_HEIGHT * 2, VIRTUAL_SCREEN_HEIGHT };
+    float resolution[] = { (float)VIRTUAL_SCREEN_HEIGHT * 2,
+                           (float)VIRTUAL_SCREEN_HEIGHT };
     SetShaderValue(sdfShader, resolutionLocation, resolution, UNIFORM_VEC2);
 
     float lastTime = (float)GetTime();
@@ -89,32 +91,32 @@ int main(void) {
         // Configuration keys
         if (IsKeyPressed(KEY_B)) {
             // Toggle bobbing
-            bobbingIntensity = bobbingIntensity > 0.5 ? 0.0 : 1.0;
+            bobbingIntensity = bobbingIntensity > 0.5f ? 0.0f : 1.0f;
         }
 
         // Turn around
         if (IsKeyDown(KEY_LEFT)) {
-            cameraRotation[1] -= delta * 120.0;
+            cameraRotation[1] -= delta * 120.0f;
             if (cameraRotation[1] < 0.0) {
-                cameraRotation[1] += 360;
+                cameraRotation[1] += 360.0f;
             }
         }
         if (IsKeyDown(KEY_RIGHT)) {
-            cameraRotation[1] += delta * 120.0;
+            cameraRotation[1] += delta * 120.0f;
             if (cameraRotation[1] > 360) {
-                cameraRotation[1] -= 360;
+                cameraRotation[1] -= 360.0f;
             }
         }
         if (IsKeyDown(KEY_UP)) {
-            cameraRotation[0] -= delta * 90.0;
+            cameraRotation[0] -= delta * 90.0f;
             if (cameraRotation[0] < -90.0) {
-                cameraRotation[0] = -90.0;
+                cameraRotation[0] = -90.0f;
             }
         }
         if (IsKeyDown(KEY_DOWN)) {
-            cameraRotation[0] += delta * 90.0;
+            cameraRotation[0] += delta * 90.0f;
             if (cameraRotation[0] > 90.0) {
-                cameraRotation[0] = 90.0;
+                cameraRotation[0] = 90.0f;
             }
         }
 
@@ -127,15 +129,13 @@ int main(void) {
             mouseLookEnabled = false;
             EnableCursor();
         }
-        if (mouseLookEnabled && mouseX >= 0 && mouseY >= 0) {
-            float deltaX = (GetMouseX() - mouseX) /
-                GetScreenHeight() * mouseSensitivity.x;
-            float deltaY = (GetMouseY() - mouseY) /
-                GetScreenHeight() * mouseSensitivity.y;
+        if (mouseLookEnabled) {
+            float dx = (float)(GetMouseX() - mouseX) / GetScreenHeight() * mouseSpeedX;
+            float dy = (float)(GetMouseY() - mouseY) / GetScreenHeight() * mouseSpeedY;
             mouseX = GetMouseX();
             mouseY = GetMouseY();
-            cameraRotation[0] = Clamp(cameraRotation[0] + deltaY, -90.0, 90.0);
-            cameraRotation[1] += deltaX;
+            cameraRotation[0] = Clamp(cameraRotation[0] + dy, -90.0f, 90.0f);
+            cameraRotation[1] += dx;
         } else {
             mouseX = GetMouseX();
             mouseY = GetMouseY();
@@ -176,37 +176,37 @@ int main(void) {
             autoMove = false;
         }
         float maxDistance = COMMENT_LENGTH * COMMENTS_COUNT;
-        cameraPosition[0] = Clamp(cameraPosition[0], -1.9, 1.9);
-        cameraPosition[2] = Clamp(cameraPosition[2], -10.0, maxDistance + 10.0);
+        cameraPosition[0] = Clamp(cameraPosition[0], -1.9f, 1.9f);
+        cameraPosition[2] = Clamp(cameraPosition[2], -10.0f, maxDistance + 10.0f);
         if (walking) {
             walkingTime += delta;
         } else {
-            walkingTime = 0;
+            walkingTime = 0.0f;
         }
 
         // Crouch and bob
         cameraPosition[1] -= headBobAmount;
-        float targetBob = sinf(walkingTime * 6.28 * HEAD_BOB_FREQUENCY) *
+        float targetBob = sinf(walkingTime * 6.28f * HEAD_BOB_FREQUENCY) *
             HEAD_BOB_MAGNITUDE * bobbingIntensity;
-        headBobAmount = Lerp(headBobAmount, targetBob, 10.0 * delta);
+        headBobAmount = Lerp(headBobAmount, targetBob, 10.0f * delta);
         if (IsKeyDown(KEY_LEFT_CONTROL)) {
-            cameraPosition[1] = Lerp(cameraPosition[1], 0.9, 10.0 * delta);
+            cameraPosition[1] = Lerp(cameraPosition[1], 0.9f, 10.0f * delta);
         } else {
-            cameraPosition[1] = Lerp(cameraPosition[1], 1.75, 10.0 * delta);
+            cameraPosition[1] = Lerp(cameraPosition[1], 1.75f, 10.0f * delta);
         }
         cameraPosition[1] += headBobAmount;
 
         // Activate location-based actions
         // TODO: Add a fence or something at the end.
-        float lightMaxDistance = maxDistance - 9;
+        float lightMaxDistance = maxDistance - 9.0f;
         float triggerPosition = Clamp(NoiseifyPosition(cameraPosition[2]),
-                                      0, lightMaxDistance);
+                                      0.0f, lightMaxDistance);
         if (triggerPosition > (lightsStage + 1) * 9) {
             lightsStage++;
         }
         if (cameraPosition[2] > (narrationStage + 1) * COMMENT_LENGTH + 6) {
             narrationStage++;
-            narrationTime = 0.0;
+            narrationTime = 0.0f;
         }
 
         BeginDrawing();
@@ -234,23 +234,23 @@ int main(void) {
         DrawTexturePro(targetTex.texture,
                        GetRenderSrc(screenWidth, screenHeight),
                        GetRenderDest(screenWidth, screenHeight),
-                       (Vector2){0.0, 0.0}, 0.0, WHITE);
+                       (Vector2){ 0.0f, 0.0f }, 0.0f, WHITE);
 
         // Narration text display
         narrationTime += delta;
-        int lineIndex = narrationTime / SUBTITLE_DURATION;
+        int lineIndex = (int)(narrationTime / SUBTITLE_DURATION);
         if (// Leave a break for the last 10% of the subtitle display time
             narrationTime / SUBTITLE_DURATION - lineIndex < 0.9 &&
             // LineIndex is within bounds
             lineIndex >= 0 && lineIndex < COMMENT_LINES &&
             // NarrationStage is within bounds
             narrationStage >= 0 && narrationStage < COMMENTS_COUNT) {
-            float fontSize = screenHeight / 240.0 * 12.0;
+            float fontSize = screenHeight / 240.0f * 12.0f;
             const char *line = narratorComments[narrationStage][lineIndex];
-            Vector2 size = MeasureTextEx(mainFont, line, fontSize, 0.0);
-            Vector2 position = { (screenWidth - (size.x - fontSize)) / 2.0,
-                                 screenHeight * 0.9 - fontSize };
-            DrawTextEx(mainFont, line, position, fontSize, 0.0, YELLOW);
+            Vector2 size = MeasureTextEx(mainFont, line, fontSize, 0.0f);
+            Vector2 position = { (screenWidth - (size.x - fontSize)) / 2.0f,
+                                 screenHeight * 0.9f - fontSize };
+            DrawTextEx(mainFont, line, position, fontSize, 0.0f, YELLOW);
         }
 
         if (IsKeyDown(KEY_F3)) {
@@ -271,25 +271,32 @@ int main(void) {
 
 Rectangle GetRenderSrc(int screenWidth, int screenHeight) {
     float ratio = (float)screenWidth / (float)screenHeight;
+    float margin, width, height;
     if (ratio < 2.0) {
-        int margin = (VIRTUAL_SCREEN_HEIGHT * (2.0 - ratio)) / 2.0;
-        return (Rectangle){margin, 0,
-                VIRTUAL_SCREEN_HEIGHT * ratio, VIRTUAL_SCREEN_HEIGHT};
+        margin = (VIRTUAL_SCREEN_HEIGHT * (2.0f - ratio)) / 2.0f;
+        width = VIRTUAL_SCREEN_HEIGHT * ratio;
+        height = (float)VIRTUAL_SCREEN_HEIGHT;
     } else {
-        return (Rectangle){0, 0,
-                VIRTUAL_SCREEN_HEIGHT * 2, VIRTUAL_SCREEN_HEIGHT};
+        margin = 0.0f;
+        width = VIRTUAL_SCREEN_HEIGHT * 2.0f;
+        height = (float)VIRTUAL_SCREEN_HEIGHT;
     }
+    return (Rectangle){margin, 0.0f, width, height};
 }
 
 Rectangle GetRenderDest(int screenWidth, int screenHeight) {
     float ratio = (float)screenWidth / (float)screenHeight;
+    float margin, width, height;
     if (ratio < 2.0) {
-        return (Rectangle){0, 0, screenWidth, screenHeight};
+        margin = 0.0f;
+        width = (float)screenWidth;
+        height = (float)screenHeight;
     } else {
-        int margin = (screenWidth - screenHeight * 2) / 2;
-        return (Rectangle){margin, 0,
-                screenHeight * 2, screenHeight};
+        margin = (screenWidth - screenHeight * 2.0f) / 2.0f;
+        width = screenHeight * 2.0f;
+        height = (float)screenHeight;
     }
+    return (Rectangle){margin, 0.0f, width, height};
 }
 
 float NoiseifyPosition(float position) {

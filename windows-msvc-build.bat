@@ -126,8 +126,12 @@ set OUTPUT_DIR=builds\windows-msvc
 REM Debug changes to flags
 IF DEFINED BUILD_DEBUG (
   set OUTPUT_FLAG=/Fe: "!GAME_NAME!"
-  set COMPILATION_FLAGS=/Od /Zi /wd4204
-  set WARNING_FLAGS=/Wall
+  set COMPILATION_FLAGS=/Od /Zi
+  REM Removed warnings:
+  REM - 4204 is C89 specific, so not relevant.
+  REM - 5045 is an informational warning about Spectre mitigation, not relevant
+  REM - 4668 is some warning in the Windows ucrt\corecrt.h >.>
+  set WARNING_FLAGS=/Wall /wd4204 /wd5045 /wd4668
   set SUBSYSTEM_FLAGS=
   set LINK_FLAGS=/link kernel32.lib user32.lib shell32.lib winmm.lib gdi32.lib opengl32.lib
   set OUTPUT_DIR=builds-debug\windows-msvc
@@ -161,8 +165,8 @@ REM Build raylib if it hasn't been cached in TEMP_DIR
 IF NOT EXIST !TEMP_DIR!\ (
   mkdir !TEMP_DIR!
   cd !TEMP_DIR!
-  REM Raylib's src folder
-  set "RAYLIB_DEFINES=/D_DEFAULT_SOURCE /DPLATFORM_DESKTOP /DGRAPHICS_API_OPENGL_33"
+
+  set RAYLIB_DEFINES=/D_DEFAULT_SOURCE /DPLATFORM_DESKTOP /DGRAPHICS_API_OPENGL_33
   set RAYLIB_C_FILES="!RAYLIB_SRC!\core.c" "!RAYLIB_SRC!\shapes.c" "!RAYLIB_SRC!\textures.c" "!RAYLIB_SRC!\text.c" "!RAYLIB_SRC!\models.c" "!RAYLIB_SRC!\utils.c" "!RAYLIB_SRC!\raudio.c" "!RAYLIB_SRC!\rglfw.c"
   set RAYLIB_INCLUDE_FLAGS=/I"!RAYLIB_SRC!" /I"!RAYLIB_SRC!\external\glfw\include"
 
