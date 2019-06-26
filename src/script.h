@@ -21,7 +21,7 @@
 #ifndef NARRATOR_SCRIPT_H
 #define NARRATOR_SCRIPT_H
 
-#define COMMENTS_COUNT 14
+#define COMMENTS_COUNT 15
 #define COMMENT_LINES 3
 
 const char *narratorComments[COMMENTS_COUNT][COMMENT_LINES] = {
@@ -52,6 +52,9 @@ const char *narratorComments[COMMENTS_COUNT][COMMENT_LINES] = {
     {"Just to clarify, what you're looking at isn't really the Helsinki metro.",
      "I couldn't actually find any blueprints, and only a few pictures.",
      "So this is just my artistic interpretation."},
+    {"You've probably noticed the noisy darkness by now.",
+     "That's the default floating point precision of OpenGL not being enough!",
+     "Turns out ray marching really needs precise numbers."},
     {"", "", ""},
     {"And that's that for our public infrastructure appreciation walk.",
      "The next station is right up ahead, but that's off-limits for you.",

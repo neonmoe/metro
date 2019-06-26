@@ -15,10 +15,12 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+#include <math.h>
+
 #include "raylib.h"
 #include "raymath.h"
-#include "math.h"
 #include "script.h"
+#include "sdf_utils.h"
 
 const int VIRTUAL_SCREEN_HEIGHT = 256;
 
@@ -151,40 +153,45 @@ int main(void) {
         // Walk
         float r = cameraRotation[1] * DEG2RAD;
         bool walking = autoMove;
+        Vector3 movement = { cameraPosition[0], 0.0f, cameraPosition[2] };
         if (IsKeyPressed(KEY_Q)) {
             autoMove = !autoMove;
         }
         if (autoMove) {
-            cameraPosition[0] += delta * WALK_SPEED * sinf(r);
-            cameraPosition[2] += delta * WALK_SPEED * cosf(r);
+            movement.x += delta * WALK_SPEED * sinf(r);
+            movement.z += delta * WALK_SPEED * cosf(r);
         }
         if (IsKeyDown(KEY_W) || IsKeyDown(KEY_I)) {
-            cameraPosition[0] += delta * WALK_SPEED * sinf(r);
-            cameraPosition[2] += delta * WALK_SPEED * cosf(r);
+            movement.x += delta * WALK_SPEED * sinf(r);
+            movement.z += delta * WALK_SPEED * cosf(r);
             walking = true;
             autoMove = false;
         }
         if (IsKeyDown(KEY_S) || IsKeyDown(KEY_K)) {
-            cameraPosition[0] -= delta * WALK_SPEED * sinf(r);
-            cameraPosition[2] -= delta * WALK_SPEED * cosf(r);
+            movement.x -= delta * WALK_SPEED * sinf(r);
+            movement.z -= delta * WALK_SPEED * cosf(r);
             walking = true;
             autoMove = false;
         }
         if (IsKeyDown(KEY_D) || IsKeyDown(KEY_L)) {
-            cameraPosition[0] += delta * WALK_SPEED * cosf(r);
-            cameraPosition[2] += delta * WALK_SPEED * -sinf(r);
+            movement.x += delta * WALK_SPEED * cosf(r);
+            movement.z += delta * WALK_SPEED * -sinf(r);
             walking = true;
             autoMove = false;
         }
         if (IsKeyDown(KEY_A) || IsKeyDown(KEY_J)) {
-            cameraPosition[0] -= delta * WALK_SPEED * cosf(r);
-            cameraPosition[2] -= delta * WALK_SPEED * -sinf(r);
+            movement.x -= delta * WALK_SPEED * cosf(r);
+            movement.z -= delta * WALK_SPEED * -sinf(r);
             walking = true;
             autoMove = false;
         }
-        // FIXME: Fix collisions
-        //cameraPosition[0] = Clamp(cameraPosition[0], -1.9f, 1.9f);
-        cameraPosition[2] = Clamp(cameraPosition[2], -10.0f, maxDistance + 10.0f);
+
+        Vector3 transformedPos = TransformToMetroSpace(movement, maxDistance);
+        if (transformedPos.x > -1.8f && transformedPos.x < 1.8f) {
+            cameraPosition[0] = movement.x;
+            cameraPosition[2] = Clamp(movement.z, -10.0f, maxDistance + 10.0f);
+        }
+
         if (walking) {
             walkingTime += delta;
         } else {
@@ -192,6 +199,7 @@ int main(void) {
         }
 
         // Crouch and bob
+        // TODO: Make the player a bit higher when on the rails/planks
         cameraPosition[1] -= headBobAmount;
         float targetBob = sinf(walkingTime * 6.28f * HEAD_BOB_FREQUENCY) *
             HEAD_BOB_MAGNITUDE * bobbingIntensity;

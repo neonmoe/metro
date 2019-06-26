@@ -17,9 +17,6 @@
 
 #version 120
 
-// Just in case, for ES 2.0
-precision highp float;
-
 // Ray marching variables (affect performance a lot)
 #define RAY_STEPS_MAX 128
 #define SDF_SURFACE_THRESHOLD 0.006
@@ -56,11 +53,12 @@ uniform float maxDistance = 100.0;
 // https://www.hel.fi/hel2/ksv/Aineistot/maanalainen/Maanalaisen_yleiskaavan_selostus.pdf
 // Looks kinda like the following curve in the range 0-1: -sin(x*pi*1.6)0.1x^(1.5)*2
 // (where 0 is the Ruoholahti station, and 1 is the Lauttasaari one)
+
+// Here starts the bits that need to be updated in sdf_utils.h
 float getXOffset(vec3 samplePos) {
     float funcX = samplePos.z / maxDistance;
     return -sin(funcX * 3.14159 * 1.6) * 0.1 * pow(funcX, 1.5) * 2.0 * maxDistance;
 }
-
 vec3 getPathNormal(vec3 samplePos) {
     float sampleXOffset = getXOffset(samplePos);
     vec3 a = vec3(samplePos.x + sampleXOffset, samplePos.yz);
@@ -68,7 +66,6 @@ vec3 getPathNormal(vec3 samplePos) {
     vec3 forward = normalize(b - a);
     return cross(forward, vec3(0.0, 1.0, 0.0));
 }
-
 vec3 transformFromMetroSpace(vec3 samplePos) {
     vec3 normal = getPathNormal(samplePos);
     float originalX = samplePos.x;
@@ -76,7 +73,6 @@ vec3 transformFromMetroSpace(vec3 samplePos) {
     samplePos -= normal * originalX;
     return samplePos;
 }
-
 vec3 transformToMetroSpace(vec3 samplePos) {
     vec3 normal = getPathNormal(samplePos);
     float originalX = samplePos.x;
@@ -84,6 +80,7 @@ vec3 transformToMetroSpace(vec3 samplePos) {
     samplePos += normal * originalX;
     return samplePos;
 }
+// Here ends the bits that need to be updated in sdf_utils.h
 
 vec4 rotate_x(vec4 direction, float r) {
     float c = cos(r);
