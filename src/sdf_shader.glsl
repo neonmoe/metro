@@ -19,7 +19,7 @@
 
 // Ray marching variables (affect performance a lot)
 #define RAY_STEPS_MAX 128
-#define SDF_SURFACE_THRESHOLD 0.006
+#define SDF_SURFACE_THRESHOLD 0.01
 #define NORMAL_EPSILON 0.001
 
 // 3D environment defining variables
@@ -218,7 +218,7 @@ float get_brightness(vec3 samplePos, vec3 normal, float fog) {
     float ambient = 0.1;
     float diffuse = 0.0;
     for (int i = stage - 1; i <= stage + 1; i++) {
-        vec3 lightPosition = transformToMetroSpace(vec3(0.0, 3.6, 3.5 + 9.0 * float(i)));
+        vec3 lightPosition = transformToMetroSpace(vec3(1.8, 3.6, 3.5 + 9.0 * float(i)));
         vec3 lightDir = lightPosition - samplePos;
         float lightDistance = 11.0;
         diffuse += pow(1.0 - max(0.0, min(1.0, length(lightDir) / lightDistance)), 0.5) *
@@ -230,13 +230,18 @@ float get_brightness(vec3 samplePos, vec3 normal, float fog) {
 
 // TODO: Improve the AO algorithm, it's a bit dumb currently
 float get_ambient_occlusion(vec3 samplePos, vec3 normal) {
-    float step = 0.005;
+    // Cheap hack to avoid wall artifacts:
+    if (normal.y == 0.0) {
+        return 0.0;
+    }
+
+    float step = 0.01;
     vec3 position = samplePos + normal * step;
     int steps = 0;
-    for (; steps < 10; steps++) {
+    for (; steps < 4; steps++) {
         SDFSample s = sdf(position, false);
         if (s.distance <= (float(steps) + 1.0) * step) {
-            return 1.0 - float(steps) / 10.0;
+            return 1.0 - float(steps) / 4.0;
         }
         position += min(s.distance, step);
     }
@@ -280,13 +285,9 @@ vec4 get_color(vec2 screenPosition, vec3 position, vec3 rotation) {
 }
 
 void main() {
-    // TODO: Ensure HiDPI compatibility
-
     // NOTE: The y coordinate is flipped because we're rendering to a render texture
     vec2 pixelCoords = vec2((gl_FragCoord.x - resolution.x / 2.0) / resolution.y,
                             (gl_FragCoord.y - resolution.y / 2.0) / resolution.y * -1.0);
-
-    // TODO: Switch to render textures for lowering the resolution
 
     gl_FragColor = get_color(pixelCoords, cameraPosition, cameraRotation);
 }
