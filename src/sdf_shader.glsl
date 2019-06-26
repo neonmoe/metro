@@ -40,11 +40,6 @@ struct SDFSample {
     vec3 color;
 };
 
-struct Light {
-    vec3 position;
-    float distance;
-};
-
 varying vec4 position;
 
 uniform vec2 resolution;
@@ -52,6 +47,48 @@ uniform vec3 cameraPosition;
 uniform vec3 cameraRotation;
 
 uniform int stage = 0;
+uniform float maxDistance = 100.0;
+
+// The Ruoholahti-Lauttasaari line on page 41 of this pdf:
+// https://www.hel.fi/hel2/ksv/Aineistot/maanalainen/Maanalaisen_yleiskaavan_selostus.pdf
+// Looks kinda like the following curve in the range 0-1: -sin(x*pi*1.6)0.1x^(1.5)*2
+// (where 0 is the Ruoholahti station, and 1 is the Lauttasaari one)
+float getXOffset(vec3 samplePos) {
+    float funcX = samplePos.z / maxDistance;
+    return -sin(funcX * 3.14159 * 1.6) * 0.1 * pow(funcX, 1.5) * 2.0 * maxDistance;
+}
+
+vec3 transformToMetroSpace(vec3 samplePos) {
+    float sampleXOffset = getXOffset(samplePos);
+    vec3 a = vec3(samplePos.x + sampleXOffset, samplePos.yz);
+    vec3 b = vec3(samplePos.x + getXOffset(vec3(samplePos.xy, samplePos.z + 0.001)), samplePos.y, samplePos.z + 0.001);
+    vec3 forward = normalize(b - a);
+    vec3 normal = cross(forward, vec3(0.0, 1.0, 0.0));
+    float originalX = samplePos.x;
+    samplePos.x = sampleXOffset;
+    samplePos -= normal * originalX;
+    return samplePos;
+}
+
+vec4 rotate_x(vec4 direction, float r) {
+    float c = cos(r);
+    float s = sin(r);
+    mat4 transform = mat4(vec4(1.0, 0.0, 0.0, 0.0),
+                          vec4(0.0, c, s, 0.0),
+                          vec4(0.0, -s, c, 0.0),
+                          vec4(0.0, 0.0, 0.0, 1.0));
+    return transform * direction;
+}
+
+vec4 rotate_y(vec4 direction, float r) {
+    float c = cos(r);
+    float s = sin(r);
+    mat4 transform = mat4(vec4(c, 0.0, -s, 0.0),
+                          vec4(0.0, 1.0, 0.0, 0.0),
+                          vec4(s, 0.0, c, 0.0),
+                          vec4(0.0, 0.0, 0.0, 1.0));
+    return transform * direction;
+}
 
 /* SDFs: https://www.iquilezles.org/www/articles/distfunctions/distfunctions.htm */
 
@@ -64,9 +101,9 @@ float sdfBox(vec3 samplePos, vec3 center, vec3 extents) {
   return length(max(d, 0.0)) + min(max(d.x, max(d.y, d.z)), 0.0);
 }
 
-float sdfRoundedBox(vec3 samplePos, vec3 center, vec3 extents) {
+float sdfRoundedBox(vec3 samplePos, vec3 center, vec3 extents, float radius) {
   vec3 d = abs(center - samplePos) - extents;
-  return length(max(d, 0.0)) - 0.1 + min(max(d.x, max(d.y, d.z)), 0.0);
+  return length(max(d, 0.0)) - radius + min(max(d.x, max(d.y, d.z)), 0.0);
 }
 
 SDFSample sdfRails(vec3 samplePos) {
@@ -83,7 +120,7 @@ SDFSample sdfTunnel(vec3 samplePos) {
     vec3 period = vec3(0.0, 0.0, 1.0);
     vec3 repeatedSample = mod(samplePos, period) - 0.5 * period;
     repeatedSample.x = abs(repeatedSample.x);
-    float distance = -sdfRoundedBox(repeatedSample, vec3(0.0, 2.0, 0.0), vec3(2.0, 2.0, 1.0));
+    float distance = -sdfRoundedBox(repeatedSample, vec3(0.0, 2.0, 0.0), vec3(2.0, 2.0, 1.0), 0.1);
     return SDFSample(distance, COLOR_TUNNEL);
 }
 
@@ -98,7 +135,7 @@ SDFSample sdfRailPlanks(vec3 samplePos) {
 SDFSample sdfLightMeshes(vec3 samplePos) {
     vec3 period = vec3(0.0, 0.0, 9.0);
     vec3 repeatedSample = mod(samplePos, period) - 0.5 * period;
-    float distance = sdfBox(repeatedSample, vec3(-1.8, 3.6, -1.0), vec3(0.2, 0.2, 0.3));
+    float distance = sdfRoundedBox(repeatedSample, vec3(-1.8, 3.6, -1.0), vec3(0.2, 0.2, 0.3), 0.05);
     if (abs(floor(samplePos.z / 9.0) - stage) <= 1) {
         return SDFSample(distance, COLOR_LIGHT_ON);
     } else {
@@ -108,6 +145,10 @@ SDFSample sdfLightMeshes(vec3 samplePos) {
 
 #define OBJECTS_COUNT 4
 SDFSample sdf(vec3 samplePos, bool ignoreLightMeshes) {
+    if (samplePos.z > 0) {
+        samplePos = transformToMetroSpace(samplePos);
+    }
+
     SDFSample samples[OBJECTS_COUNT] = SDFSample[OBJECTS_COUNT]
         (ignoreLightMeshes ? SDFSample(10000.0, vec3(0.0, 0.0, 0.0)) : sdfLightMeshes(samplePos),
          sdfTunnel(samplePos),
@@ -123,28 +164,6 @@ SDFSample sdf(vec3 samplePos, bool ignoreLightMeshes) {
         }
     }
     return SDFSample(lowestDistance, color);
-}
-
-vec4 rotate_x(vec4 direction, float degrees) {
-    float r = radians(degrees);
-    float c = cos(r);
-    float s = sin(r);
-    mat4 transform = mat4(vec4(1.0, 0.0, 0.0, 0.0),
-                          vec4(0.0, c, s, 0.0),
-                          vec4(0.0, -s, c, 0.0),
-                          vec4(0.0, 0.0, 0.0, 1.0));
-    return transform * direction;
-}
-
-vec4 rotate_y(vec4 direction, float degrees) {
-    float r = radians(degrees);
-    float c = cos(r);
-    float s = sin(r);
-    mat4 transform = mat4(vec4(c, 0.0, -s, 0.0),
-                          vec4(0.0, 1.0, 0.0, 0.0),
-                          vec4(s, 0.0, c, 0.0),
-                          vec4(0.0, 0.0, 0.0, 1.0));
-    return transform * direction;
 }
 
 float get_fog(vec3 cam, vec3 position) {
@@ -187,11 +206,13 @@ float get_brightness(vec3 samplePos, vec3 normal, float fog) {
     float ambient = 0.1;
     float diffuse = 0.0;
     for (int i = stage - 1; i <= stage + 1; i++) {
-        Light light = Light(vec3(-1.8, 3.6, 3.5 + 9.0 * float(i)), 10.0);
-        vec3 lightDir = light.position - samplePos;
-        diffuse += pow(1.0 - max(0.0, min(1.0, length(lightDir) / light.distance)), 0.5) *
+        vec3 lightPosition = vec3(-1.8, 3.6, 3.5 + 9.0 * float(i));
+        lightPosition.x -= getXOffset(lightPosition);
+        vec3 lightDir = lightPosition - samplePos;
+        float lightDistance = 11.0;
+        diffuse += pow(1.0 - max(0.0, min(1.0, length(lightDir) / lightDistance)), 0.5) *
             max(0.0, dot(normal, normalize(lightDir))) *
-            (1.0 - get_shadow(samplePos, light.position) * 0.75) * 0.35;
+            (1.0 - get_shadow(samplePos, lightPosition) * 0.75) * 0.35;
     }
     return min(1.0, diffuse) + ambient;
 }
@@ -216,8 +237,8 @@ vec4 get_color(vec2 screenPosition, vec3 position, vec3 rotation) {
     float nearDistance = 0.5; // This is 90 degrees FoV
     vec3 direction = vec3(screenPosition.x, screenPosition.y, nearDistance);
     direction = normalize(direction);
-    direction = rotate_x(vec4(direction, 1.0), rotation.x).xyz;
-    direction = rotate_y(vec4(direction, 1.0), rotation.y).xyz;
+    direction = rotate_x(vec4(direction, 1.0), radians(rotation.x)).xyz;
+    direction = rotate_y(vec4(direction, 1.0), radians(rotation.y)).xyz;
 
     vec3 originalPosition = position;
     bool hit = false;

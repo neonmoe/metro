@@ -75,12 +75,15 @@ int main(void) {
     int cameraPositionLocation = GetShaderLocation(sdfShader, "cameraPosition");
     int cameraRotationLocation = GetShaderLocation(sdfShader, "cameraRotation");
     int lightsStageLocation = GetShaderLocation(sdfShader, "stage");
+    int maxDistanceLocation = GetShaderLocation(sdfShader, "maxDistance");
 
     RenderTexture2D targetTex = LoadRenderTexture(VIRTUAL_SCREEN_HEIGHT * 2,
                                                   VIRTUAL_SCREEN_HEIGHT);
     float resolution[] = { (float)VIRTUAL_SCREEN_HEIGHT * 2,
                            (float)VIRTUAL_SCREEN_HEIGHT };
     SetShaderValue(sdfShader, resolutionLocation, resolution, UNIFORM_VEC2);
+    float maxDistance = COMMENT_LENGTH * COMMENTS_COUNT;
+    SetShaderValue(sdfShader, maxDistanceLocation, &maxDistance, UNIFORM_FLOAT);
 
     float lastTime = (float)GetTime();
     while (!WindowShouldClose()) {
@@ -175,8 +178,8 @@ int main(void) {
             walking = true;
             autoMove = false;
         }
-        float maxDistance = COMMENT_LENGTH * COMMENTS_COUNT;
-        cameraPosition[0] = Clamp(cameraPosition[0], -1.9f, 1.9f);
+        // FIXME: Fix collisions
+        //cameraPosition[0] = Clamp(cameraPosition[0], -1.9f, 1.9f);
         cameraPosition[2] = Clamp(cameraPosition[2], -10.0f, maxDistance + 10.0f);
         if (walking) {
             walkingTime += delta;
