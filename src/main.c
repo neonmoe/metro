@@ -204,11 +204,16 @@ int main(void) {
         float targetBob = sinf(walkingTime * 6.28f * HEAD_BOB_FREQUENCY) *
             HEAD_BOB_MAGNITUDE * bobbingIntensity;
         headBobAmount = Lerp(headBobAmount, targetBob, 10.0f * delta);
+        bool onPlank = fabs(transformedPos.x) < 1.0;
+        bool onRail = fabs(transformedPos.x) > 0.762 - 0.05 &&
+            fabs(transformedPos.x) < 0.762 + 0.05;
+        float height = onRail ? 0.3f : (onPlank ? 0.1f : 0.0f);
         if (IsKeyDown(KEY_LEFT_CONTROL)) {
-            cameraPosition[1] = Lerp(cameraPosition[1], 0.9f, 10.0f * delta);
+            height += 0.9f;
         } else {
-            cameraPosition[1] = Lerp(cameraPosition[1], 1.75f, 10.0f * delta);
+            height += 1.75f;
         }
+        cameraPosition[1] = Lerp(cameraPosition[1], height, 10.0f * delta);
         cameraPosition[1] += headBobAmount;
 
         // Activate location-based actions
