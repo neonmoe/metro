@@ -91,6 +91,10 @@ int main(void) {
         float delta = currentTime - lastTime;
         lastTime = currentTime;
 
+        if (IsKeyDown(KEY_LEFT_SHIFT)) {
+            delta *= 10.0f;
+        }
+
         // Configuration keys
         if (IsKeyPressed(KEY_B)) {
             // Toggle bobbing

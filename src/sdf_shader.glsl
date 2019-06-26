@@ -17,6 +17,9 @@
 
 #version 120
 
+// Just in case, for ES 2.0
+precision highp float;
+
 // Ray marching variables (affect performance a lot)
 #define RAY_STEPS_MAX 128
 #define SDF_SURFACE_THRESHOLD 0.006
@@ -58,15 +61,27 @@ float getXOffset(vec3 samplePos) {
     return -sin(funcX * 3.14159 * 1.6) * 0.1 * pow(funcX, 1.5) * 2.0 * maxDistance;
 }
 
-vec3 transformToMetroSpace(vec3 samplePos) {
+vec3 getPathNormal(vec3 samplePos) {
     float sampleXOffset = getXOffset(samplePos);
     vec3 a = vec3(samplePos.x + sampleXOffset, samplePos.yz);
     vec3 b = vec3(samplePos.x + getXOffset(vec3(samplePos.xy, samplePos.z + 0.001)), samplePos.y, samplePos.z + 0.001);
     vec3 forward = normalize(b - a);
-    vec3 normal = cross(forward, vec3(0.0, 1.0, 0.0));
+    return cross(forward, vec3(0.0, 1.0, 0.0));
+}
+
+vec3 transformFromMetroSpace(vec3 samplePos) {
+    vec3 normal = getPathNormal(samplePos);
     float originalX = samplePos.x;
-    samplePos.x = sampleXOffset;
+    samplePos.x = getXOffset(samplePos);
     samplePos -= normal * originalX;
+    return samplePos;
+}
+
+vec3 transformToMetroSpace(vec3 samplePos) {
+    vec3 normal = getPathNormal(samplePos);
+    float originalX = samplePos.x;
+    samplePos.x = -getXOffset(samplePos);
+    samplePos += normal * originalX;
     return samplePos;
 }
 
@@ -146,7 +161,7 @@ SDFSample sdfLightMeshes(vec3 samplePos) {
 #define OBJECTS_COUNT 4
 SDFSample sdf(vec3 samplePos, bool ignoreLightMeshes) {
     if (samplePos.z > 0) {
-        samplePos = transformToMetroSpace(samplePos);
+        samplePos = transformFromMetroSpace(samplePos);
     }
 
     SDFSample samples[OBJECTS_COUNT] = SDFSample[OBJECTS_COUNT]
@@ -206,8 +221,7 @@ float get_brightness(vec3 samplePos, vec3 normal, float fog) {
     float ambient = 0.1;
     float diffuse = 0.0;
     for (int i = stage - 1; i <= stage + 1; i++) {
-        vec3 lightPosition = vec3(-1.8, 3.6, 3.5 + 9.0 * float(i));
-        lightPosition.x -= getXOffset(lightPosition);
+        vec3 lightPosition = transformToMetroSpace(vec3(0.0, 3.6, 3.5 + 9.0 * float(i)));
         vec3 lightDir = lightPosition - samplePos;
         float lightDistance = 11.0;
         diffuse += pow(1.0 - max(0.0, min(1.0, length(lightDir) / lightDistance)), 0.5) *
