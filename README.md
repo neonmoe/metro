@@ -4,6 +4,8 @@ Ruoholahti-Lauttasaari part of the Helsinki metro, with the interiors
 being completely improvised, but the route based on [some plans found
 on the internet (page 41)][metro-plan].
 
+The game takes about 25 minutes to walk through completely.
+
 ### Controls
 - WASD or IJKL to move
 - Arrow keys or mouse to look around

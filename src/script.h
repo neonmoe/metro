@@ -77,7 +77,7 @@ const char *narratorComments[COMMENTS_COUNT][COMMENT_LINES] = {
      "The noise and the interesting effects caused by it are accidental.",
      ""},
     {"And that's that for our public infrastructure appreciation walk.",
-     "We have arrived on Lauttasaari station.",
+     "We have arrived at Lauttasaari station.",
      "Thanks for walking the whole way, I wish you a good day.", "", "", ""}
 };
 
