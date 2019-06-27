@@ -25,29 +25,33 @@
 
 #include "raymath.h"
 
-float GetXOffset(Vector3 samplePos, float maxDistance) {
-    float funcX = samplePos.z / maxDistance;
-    return -sinf(funcX * 3.14159 * 1.6) * 0.1 * pow(funcX, 1.5) * 2.0 * maxDistance;
+float Smoothstep(float x) {
+    x = Clamp(x, 0.0f, 1.0f);
+    return x * x * (3.0f - 2.0f * x);
+}
+
+float GetXOffset(float z, float maxDistance) {
+    float x = z / maxDistance;
+    return -sinf(x * 6.2831853f - 1.2f) * Smoothstep(x * 2.0f - 0.3f) *
+        0.07f * maxDistance;
 }
 Vector3 GetPathNormal(Vector3 samplePos, float maxDistance) {
-    float sampleXOffset = GetXOffset(samplePos, maxDistance);
-    Vector3 a = { samplePos.x + sampleXOffset, samplePos.y, samplePos.z };
-    Vector3 b = { samplePos.x + GetXOffset((Vector3){ samplePos.x, samplePos.y, samplePos.z + 0.001f }, maxDistance),
-                  samplePos.y, samplePos.z + 0.001f};
-    Vector3 forward = Vector3Normalize(Vector3Subtract(b, a));
-    return Vector3CrossProduct(forward, (Vector3){ 0.0, 1.0, 0.0 });
+    float currentXOffset = GetXOffset(samplePos.z, maxDistance);
+    float nextXOffset = GetXOffset(samplePos.z + 0.001f, maxDistance);
+    return Vector3Normalize((Vector3){ -0.001f, 0.0f,
+                nextXOffset - currentXOffset });
 }
 Vector3 TransformFromMetroSpace(Vector3 samplePos, float maxDistance) {
     Vector3 normal = GetPathNormal(samplePos, maxDistance);
     float originalX = samplePos.x;
-    samplePos.x = GetXOffset(samplePos, maxDistance);
+    samplePos.x = GetXOffset(samplePos.z, maxDistance);
     samplePos = Vector3Subtract(samplePos, Vector3Scale(normal, originalX));
     return samplePos;
 }
 Vector3 TransformToMetroSpace(Vector3 samplePos, float maxDistance) {
     Vector3 normal = GetPathNormal(samplePos, maxDistance);
     float originalX = samplePos.x;
-    samplePos.x = -GetXOffset(samplePos, maxDistance);
+    samplePos.x = -GetXOffset(samplePos.z, maxDistance);
     samplePos = Vector3Add(samplePos, Vector3Scale(normal, originalX));
     return samplePos;
 }

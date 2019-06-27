@@ -24,16 +24,18 @@
 
 const int VIRTUAL_SCREEN_HEIGHT = 256;
 
+const float MAX_DISTANCE = 2150.0f;
 const float WALK_SPEED = 1.4f;
 const float HEAD_BOB_MAGNITUDE = 0.05f;
 const float HEAD_BOB_FREQUENCY = 1.6f;
-const float COMMENT_LENGTH = 28.0f;
+const float COMMENT_LENGTH = MAX_DISTANCE / COMMENTS_COUNT;
 
-const float SUBTITLE_DURATION = 6.0f;
+const float SUBTITLE_DURATION = 15.0f;
 
 Rectangle GetRenderSrc(int screenWidth, int screenHeight);
 Rectangle GetRenderDest(int screenWidth, int screenHeight);
 float NoiseifyPosition(float position);
+void DisplaySubtitle(Font font, const char *subtitle, float fontSize, float y);
 
 int main(void) {
     // Player values
@@ -84,7 +86,7 @@ int main(void) {
     float resolution[] = { (float)VIRTUAL_SCREEN_HEIGHT * 2,
                            (float)VIRTUAL_SCREEN_HEIGHT };
     SetShaderValue(sdfShader, resolutionLocation, resolution, UNIFORM_VEC2);
-    float maxDistance = COMMENT_LENGTH * COMMENTS_COUNT;
+    float maxDistance = MAX_DISTANCE;
     SetShaderValue(sdfShader, maxDistanceLocation, &maxDistance, UNIFORM_FLOAT);
 
     float lastTime = (float)GetTime();
@@ -186,10 +188,10 @@ int main(void) {
             autoMove = false;
         }
 
-        Vector3 transformedPos = TransformToMetroSpace(movement, maxDistance);
+        Vector3 transformedPos = TransformToMetroSpace(movement, MAX_DISTANCE);
         if (transformedPos.x > -1.8f && transformedPos.x < 1.8f) {
             cameraPosition[0] = movement.x;
-            cameraPosition[2] = Clamp(movement.z, -10.0f, maxDistance + 10.0f);
+            cameraPosition[2] = Clamp(movement.z, -10.0f, MAX_DISTANCE + 10.0f);
         }
 
         if (walking) {
@@ -218,7 +220,7 @@ int main(void) {
 
         // Activate location-based actions
         // TODO: Add a fence or something at the end.
-        float lightMaxDistance = maxDistance - 9.0f;
+        float lightMaxDistance = MAX_DISTANCE - 9.0f;
         float triggerPosition = Clamp(NoiseifyPosition(cameraPosition[2]),
                                       0.0f, lightMaxDistance);
         if (triggerPosition > (lightsStage + 1) * 9) {
@@ -258,19 +260,20 @@ int main(void) {
 
         // Narration text display
         narrationTime += delta;
-        int lineIndex = (int)(narrationTime / SUBTITLE_DURATION);
+        int lineIndex = (int)(narrationTime / SUBTITLE_DURATION) * 2;
         if (// Leave a break for the last 10% of the subtitle display time
             narrationTime / SUBTITLE_DURATION - lineIndex < 0.9 &&
             // LineIndex is within bounds
-            lineIndex >= 0 && lineIndex < COMMENT_LINES &&
+            lineIndex >= 0 && lineIndex < COMMENT_LINES - 1 &&
             // NarrationStage is within bounds
             narrationStage >= 0 && narrationStage < COMMENTS_COUNT) {
             float fontSize = screenHeight / 240.0f * 12.0f;
-            const char *line = narratorComments[narrationStage][lineIndex];
-            Vector2 size = MeasureTextEx(mainFont, line, fontSize, 0.0f);
-            Vector2 position = { (screenWidth - (size.x - fontSize)) / 2.0f,
-                                 screenHeight * 0.9f - fontSize };
-            DrawTextEx(mainFont, line, position, fontSize, 0.0f, YELLOW);
+            float y = screenHeight * 0.9f - fontSize;
+            for (int i = 0; i < 2; i++) {
+                int index = lineIndex + i;
+                const char *line = narratorComments[narrationStage][index];
+                DisplaySubtitle(mainFont, line, fontSize, y + i * fontSize);
+            }
         }
 
         if (IsKeyDown(KEY_F3)) {
@@ -321,4 +324,10 @@ Rectangle GetRenderDest(int screenWidth, int screenHeight) {
 
 float NoiseifyPosition(float position) {
     return position + (int)(position * 4.1) % 14 - 7;
+}
+
+void DisplaySubtitle(Font font, const char *subtitle, float fontSize, float y) {
+    Vector2 size = MeasureTextEx(font, subtitle, fontSize, 0.0f);
+    Vector2 position = { (GetScreenWidth() - (size.x - fontSize)) / 2.0f, y };
+    DrawTextEx(font, subtitle, position, fontSize, 0.0f, YELLOW);
 }

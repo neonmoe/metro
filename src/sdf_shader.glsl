@@ -51,32 +51,33 @@ uniform float maxDistance = 100.0;
 
 // The Ruoholahti-Lauttasaari line on page 41 of this pdf:
 // https://www.hel.fi/hel2/ksv/Aineistot/maanalainen/Maanalaisen_yleiskaavan_selostus.pdf
-// Looks kinda like the following curve in the range 0-1: -sin(x*pi*1.6)0.1x^(1.5)*2
+// Looks like the following curve in the range 0-1:
+//   -sin(x*pi*2-1.2)*smoothstep(x*2-0.3)*0.07
 // (where 0 is the Ruoholahti station, and 1 is the Lauttasaari one)
+// Also, based on roughly mapping out this distance on Google Maps,
+// the length of the line is about 2.1 kilometers.
 
 // Here starts the bits that need to be updated in sdf_utils.h
-float getXOffset(vec3 samplePos) {
-    float funcX = samplePos.z / maxDistance;
-    return -sin(funcX * 3.14159 * 1.6) * 0.1 * pow(funcX, 1.5) * 2.0 * maxDistance;
+float getXOffset(float z) {
+    float x = z / maxDistance;
+    return -sin(x * 6.2831853 - 1.2) * smoothstep(0.0, 1.0, x * 2 - 0.3) * 0.07 * maxDistance;
 }
 vec3 getPathNormal(vec3 samplePos) {
-    float sampleXOffset = getXOffset(samplePos);
-    vec3 a = vec3(samplePos.x + sampleXOffset, samplePos.yz);
-    vec3 b = vec3(samplePos.x + getXOffset(vec3(samplePos.xy, samplePos.z + 0.001)), samplePos.y, samplePos.z + 0.001);
-    vec3 forward = normalize(b - a);
-    return cross(forward, vec3(0.0, 1.0, 0.0));
+    float currentXOffset = getXOffset(samplePos.z);
+    float nextXOffset = getXOffset(samplePos.z + 0.001);
+    return normalize(vec3(-0.001, 0.0, nextXOffset - currentXOffset));
 }
 vec3 transformFromMetroSpace(vec3 samplePos) {
     vec3 normal = getPathNormal(samplePos);
     float originalX = samplePos.x;
-    samplePos.x = getXOffset(samplePos);
+    samplePos.x = getXOffset(samplePos.z);
     samplePos -= normal * originalX;
     return samplePos;
 }
 vec3 transformToMetroSpace(vec3 samplePos) {
     vec3 normal = getPathNormal(samplePos);
     float originalX = samplePos.x;
-    samplePos.x = -getXOffset(samplePos);
+    samplePos.x = -getXOffset(samplePos.z);
     samplePos += normal * originalX;
     return samplePos;
 }

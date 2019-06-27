@@ -1,5 +1,8 @@
 # untitled
-Haven't named this project yet.
+This unnamed project is a walking simulator. The environment is the
+Ruoholahti-Lauttasaari part of the Helsinki metro, with the interiors
+being completely improvised, but the route based on [some plans found
+on the internet (page 41)][metro-plan].
 
 ### Controls
 - WASD or IJKL to move
@@ -17,3 +20,5 @@ work, refer to the documentation of
 [This walking simulator](src/) is distributed under the [GNU
 GPLv3](LICENSE.md) license. The dependencies (under
 [vendor/](vendor/)) are distributed under their respective licenses.
+
+[metro-plan]: https://www.hel.fi/hel2/ksv/Aineistot/maanalainen/Maanalaisen_yleiskaavan_selostus.pdf "A PDF containing the mentioned plans"
