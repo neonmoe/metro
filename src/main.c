@@ -24,8 +24,9 @@
 
 #define VIRTUAL_SCREEN_HEIGHT 256
 
-#define DEFAULT_MAX_DISTANCE 2150.0f
+#define DEFAULT_MAX_DISTANCE 2140.0f
 #define WALK_SPEED 1.4f
+#define RUN_SPEED 4.2f
 #define HEAD_BOB_MAGNITUDE 0.05f
 #define HEAD_BOB_FREQUENCY 1.6f
 #define COMMENT_LENGTH (DEFAULT_MAX_DISTANCE / COMMENTS_COUNT)
@@ -44,6 +45,7 @@ int main(void) {
     float walkingTime = 0.0f;
     float headBobAmount = 0.0f;
     bool autoMove = false;
+    bool running = false;
 
     // Mouselook values
     int mouseX = -1;
@@ -94,10 +96,6 @@ int main(void) {
         float currentTime = (float)GetTime();
         float delta = currentTime - lastTime;
         lastTime = currentTime;
-
-        if (IsKeyDown(KEY_LEFT_SHIFT)) {
-            delta *= 10.0f;
-        }
 
         // Configuration keys
         if (IsKeyPressed(KEY_B)) {
@@ -152,38 +150,44 @@ int main(void) {
             mouseY = GetMouseY();
         }
 
+        // Run toggle
+        if (IsKeyPressed(KEY_LEFT_SHIFT)) {
+            running = !running;
+        }
+
         // Walk
         float r = cameraRotation[1] * DEG2RAD;
         bool walking = autoMove;
+        float speed = running ? RUN_SPEED : WALK_SPEED;
         Vector3 movement = { cameraPosition[0], 0.0f, cameraPosition[2] };
         if (IsKeyPressed(KEY_Q)) {
             autoMove = !autoMove;
         }
         if (autoMove) {
-            movement.x += delta * WALK_SPEED * sinf(r);
-            movement.z += delta * WALK_SPEED * cosf(r);
+            movement.x += delta * speed * sinf(r);
+            movement.z += delta * speed * cosf(r);
         }
         if (IsKeyDown(KEY_W) || IsKeyDown(KEY_I)) {
-            movement.x += delta * WALK_SPEED * sinf(r);
-            movement.z += delta * WALK_SPEED * cosf(r);
+            movement.x += delta * speed * sinf(r);
+            movement.z += delta * speed * cosf(r);
             walking = true;
             autoMove = false;
         }
         if (IsKeyDown(KEY_S) || IsKeyDown(KEY_K)) {
-            movement.x -= delta * WALK_SPEED * sinf(r);
-            movement.z -= delta * WALK_SPEED * cosf(r);
+            movement.x -= delta * speed * sinf(r);
+            movement.z -= delta * speed * cosf(r);
             walking = true;
             autoMove = false;
         }
         if (IsKeyDown(KEY_D) || IsKeyDown(KEY_L)) {
-            movement.x += delta * WALK_SPEED * cosf(r);
-            movement.z += delta * WALK_SPEED * -sinf(r);
+            movement.x += delta * speed * cosf(r);
+            movement.z += delta * speed * -sinf(r);
             walking = true;
             autoMove = false;
         }
         if (IsKeyDown(KEY_A) || IsKeyDown(KEY_J)) {
-            movement.x -= delta * WALK_SPEED * cosf(r);
-            movement.z -= delta * WALK_SPEED * -sinf(r);
+            movement.x -= delta * speed * cosf(r);
+            movement.z -= delta * speed * -sinf(r);
             walking = true;
             autoMove = false;
         }
@@ -203,8 +207,9 @@ int main(void) {
         // Crouch and bob
         // TODO: Make the player a bit higher when on the rails/planks
         cameraPosition[1] -= headBobAmount;
-        float targetBob = sinf(walkingTime * 6.28f * HEAD_BOB_FREQUENCY) *
-            HEAD_BOB_MAGNITUDE * bobbingIntensity;
+        float bobTime = walkingTime * 6.28f * HEAD_BOB_FREQUENCY *
+            (running ? 1.4f : 1.0f);
+        float targetBob = sinf(bobTime) * HEAD_BOB_MAGNITUDE * bobbingIntensity;
         headBobAmount = Lerp(headBobAmount, targetBob, 0.2f);
         bool onPlank = fabs(transformedPos.x) < 1.0;
         bool onRail = fabs(transformedPos.x) > 0.762 - 0.05 &&
