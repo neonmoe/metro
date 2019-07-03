@@ -16,6 +16,7 @@
  */
 
 #include <math.h>
+#include <string.h>
 
 #include "raylib.h"
 #include "raymath.h"
@@ -31,12 +32,13 @@
 #define HEAD_BOB_FREQUENCY 1.6f
 #define COMMENT_LENGTH (DEFAULT_MAX_DISTANCE / COMMENTS_COUNT)
 
-#define SUBTITLE_DURATION 15.0f
+#define SECONDS_PER_CHARACTER 0.1f
 
 Rectangle GetRenderSrc(int screenWidth, int screenHeight);
 Rectangle GetRenderDest(int screenWidth, int screenHeight);
 float NoiseifyPosition(float position);
 void DisplaySubtitle(Font font, const char *subtitle, float fontSize, float y);
+int GetLine(float narrationTime, int narrationStage, int linesPerScreen);
 
 int main(void) {
     // Player values
@@ -95,6 +97,7 @@ int main(void) {
     while (!WindowShouldClose()) {
         float currentTime = (float)GetTime();
         float delta = currentTime - lastTime;
+        delta = delta > 0.03f ? 0.03f : delta;
         lastTime = currentTime;
 
         // Configuration keys
@@ -205,7 +208,6 @@ int main(void) {
         }
 
         // Crouch and bob
-        // TODO: Make the player a bit higher when on the rails/planks
         cameraPosition[1] -= headBobAmount;
         float bobTime = walkingTime * 6.28f * HEAD_BOB_FREQUENCY *
             (running ? 1.4f : 1.0f);
@@ -264,19 +266,22 @@ int main(void) {
                        (Vector2){ 0.0f, 0.0f }, 0.0f, WHITE);
 
         // Narration text display
-        narrationTime += delta;
-        int lineIndex = (int)(narrationTime / SUBTITLE_DURATION) * 2;
-        if (// Leave a break for the last 10% of the subtitle display time
-            narrationTime / SUBTITLE_DURATION - lineIndex < 0.9 &&
-            // NarrationStage is within bounds
-            narrationStage >= 0 && narrationStage < COMMENTS_COUNT) {
-            float fontSize = screenHeight / 240.0f * 12.0f;
-            float y = screenHeight * 0.9f - fontSize;
-            for (int i = 0; i < 2; i++) {
-                int index = lineIndex + i;
-                if (index >= 0 && index < COMMENT_LINES) {
-                    const char *line = narratorComments[narrationStage][index];
-                    DisplaySubtitle(mainFont, line, fontSize, y + i * fontSize);
+        if (narrationStage >= 0 && narrationStage < COMMENTS_COUNT) {
+            narrationTime += delta;
+            int linesPerScreen = 2;
+            int lineIndex = GetLine(narrationTime, narrationStage,
+                                    linesPerScreen);
+            if (lineIndex != -1) {
+                float fontSize = screenHeight / 240.0f * 12.0f;
+                float y = screenHeight * 0.9f - fontSize;
+                for (int i = 0; i < linesPerScreen; i++) {
+                    int index = lineIndex + i;
+                    if (index >= 0 && index < COMMENT_LINES) {
+                        const char *line =
+                            narratorComments[narrationStage][index];
+                        DisplaySubtitle(mainFont, line, fontSize, y);
+                        y += fontSize;
+                    }
                 }
             }
         }
@@ -335,4 +340,24 @@ void DisplaySubtitle(Font font, const char *subtitle, float fontSize, float y) {
     Vector2 size = MeasureTextEx(font, subtitle, fontSize, 0.0f);
     Vector2 position = { (GetScreenWidth() - (size.x - fontSize)) / 2.0f, y };
     DrawTextEx(font, subtitle, position, fontSize, 0.0f, YELLOW);
+}
+
+int GetLine(float narrationTime, int narrationStage, int linesPerScreen) {
+    int lineIndex = 0;
+    float timeCounter = 0.0f;
+    const char **lines = narratorComments[narrationStage];
+    for (; lineIndex < COMMENT_LINES; lineIndex += linesPerScreen) {
+        for (int j = 0; j < linesPerScreen; j++) {
+            const char *line = lines[lineIndex + j];
+            timeCounter += (float)strlen(line) * SECONDS_PER_CHARACTER;
+        }
+        if (narrationTime < timeCounter) {
+            if (narrationTime > timeCounter - 0.5f) {
+                // Leave gaps between lines
+                return -1;
+            }
+            break;
+        }
+    }
+    return lineIndex;
 }
