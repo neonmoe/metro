@@ -126,7 +126,8 @@ set OUTPUT_DIR=builds\windows-msvc
 REM Debug changes to flags
 IF DEFINED BUILD_DEBUG (
   set OUTPUT_FLAG=/Fe: "!GAME_NAME!"
-  set COMPILATION_FLAGS=/Od /Zi
+  REM _CRT_SECURE_NO_WARNINGS is defined because the CRT has deprecated some C standard functions for safety reasons
+  set COMPILATION_FLAGS=/Od /Zi /D_CRT_SECURE_NO_WARNINGS
   REM Removed warnings:
   REM - 4204 is C89 specific, so not relevant.
   REM - 5045 is an informational warning about Spectre mitigation, not relevant

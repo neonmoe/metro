@@ -363,7 +363,7 @@ bool EnsureResourcesExist(void) {
         ClearBackground((Color){ 0x44, 0x11, 0x11, 0xFF });
         Color textColor = (Color){ 0xEE, 0xEE, 0x88, 0xFF };
         DrawWarningText("Missing files:", 64, 100, textColor);
-        int warningY = 175;
+        int warningY = 200;
         for (int i = 0; i < RESOURCE_COUNT; i++) {
             if (!fileLoaded[i]) {
                 DrawWarningText(resourcePaths[i], 32, warningY, textColor);
