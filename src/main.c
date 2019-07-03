@@ -45,6 +45,7 @@ void DrawWarningText(const char *text, int fontSize, int y, Color color);
 bool EnsureResourcesExist(void);
 Rectangle GetRenderSrc(int screenWidth, int screenHeight);
 Rectangle GetRenderDest(int screenWidth, int screenHeight);
+Vector3 GetLegalPlayerMovement(Vector3 position, Vector3 movement, float maxDistance);
 float NoiseifyPosition(float position);
 void DisplaySubtitle(Font font, const char *subtitle, float fontSize, float y);
 int GetLine(float narrationTime, int narrationStage, int linesPerScreen);
@@ -179,7 +180,7 @@ int main(void) {
         float r = cameraRotation[1] * DEG2RAD;
         bool walking = autoMove;
         float speed = running ? RUN_SPEED : WALK_SPEED;
-        Vector3 movement = { cameraPosition[0], 0.0f, cameraPosition[2] };
+        Vector3 movement = { 0.0f, 0.0f, 0.0f };
         if (IsKeyPressed(KEY_Q)) {
             autoMove = !autoMove;
         }
@@ -212,11 +213,19 @@ int main(void) {
             autoMove = false;
         }
 
-        Vector3 transformedPos = TransformToMetroSpace(movement, maxDistance);
-        if (transformedPos.x > -1.8f && transformedPos.x < 1.8f) {
-            cameraPosition[0] = movement.x;
-            cameraPosition[2] = Clamp(movement.z, -10.0f, maxDistance + 10.0f);
-        }
+        // The actual movement
+        Vector3 position = { cameraPosition[0], 0.0f, cameraPosition[2] };
+        // ..on the forward axis
+        Vector3 forward = GetPathForward(position, maxDistance);
+        forward = Vector3Scale(forward, Vector3DotProduct(forward, movement));
+        position = GetLegalPlayerMovement(position, forward, maxDistance);
+        // ..on the right axis
+        Vector3 right = GetPathNormal(position, maxDistance);
+        right = Vector3Scale(right, Vector3DotProduct(right, movement));
+        position = GetLegalPlayerMovement(position, right, maxDistance);
+        // ..and finally applying it to the actual coordinates
+        cameraPosition[0] = position.x;
+        cameraPosition[2] = Clamp(position.z, -10.0f, maxDistance + 10.0f);
 
         if (walking) {
             walkingTime += delta;
@@ -230,9 +239,10 @@ int main(void) {
             (running ? 1.4f : 1.0f);
         float targetBob = sinf(bobTime) * HEAD_BOB_MAGNITUDE * bobbingIntensity;
         headBobAmount = Lerp(headBobAmount, targetBob, 0.2f);
-        bool onPlank = fabs(transformedPos.x) < 1.0;
-        bool onRail = fabs(transformedPos.x) > 0.762 - 0.05 &&
-            fabs(transformedPos.x) < 0.762 + 0.05;
+        float relativeX = TransformToMetroSpace(movement, maxDistance).x;
+        bool onPlank = fabs(relativeX) < 1.0;
+        bool onRail = fabs(relativeX) > 0.762 - 0.05 &&
+            fabs(relativeX) < 0.762 + 0.05;
         float height = onRail ? 0.3f : (onPlank ? 0.1f : 0.0f);
         if (IsKeyDown(KEY_LEFT_CONTROL)) {
             height += 0.9f;
@@ -349,7 +359,7 @@ bool EnsureResourcesExist(void) {
         }
 
         double time = GetTime();
-        if (time < lastFileCheck + 0.1) {
+        if (time > lastFileCheck + 0.1) {
             lastFileCheck = time;
             missingFiles = false;
             for (int i = 0; i < RESOURCE_COUNT; i++) {
@@ -403,6 +413,15 @@ Rectangle GetRenderDest(int screenWidth, int screenHeight) {
         height = (float)screenHeight;
     }
     return (Rectangle){margin, 0.0f, width, height};
+}
+
+Vector3 GetLegalPlayerMovement(Vector3 position, Vector3 movement, float maxDistance) {
+    Vector3 newPos = Vector3Add(position, movement);
+    Vector3 transformedPos = TransformToMetroSpace(newPos, maxDistance);
+    if (transformedPos.x > -1.8f && transformedPos.x < 1.8f) {
+        return newPos;
+    }
+    return position;
 }
 
 float NoiseifyPosition(float position) {

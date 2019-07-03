@@ -56,4 +56,11 @@ Vector3 TransformToMetroSpace(Vector3 samplePos, float maxDistance) {
     return samplePos;
 }
 
+Vector3 GetPathForward(Vector3 samplePos, float maxDistance) {
+    float currentXOffset = GetXOffset(samplePos.z, maxDistance);
+    float nextXOffset = GetXOffset(samplePos.z + 0.001f, maxDistance);
+    return Vector3Normalize((Vector3){ nextXOffset - currentXOffset,
+                0.0f, 0.001f });
+}
+
 #endif
