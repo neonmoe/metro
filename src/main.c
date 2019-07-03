@@ -15,13 +15,19 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+// TODO: For Raspberry Pi compatibility, add OpenGL ES version of the shader
+// (it's probably enough to just load the shaders and switch
+// around the #version to "100 es")
+
 #include <math.h>
 #include <string.h>
+#include <stdio.h>
 
 #include "raylib.h"
 #include "raymath.h"
 #include "script.h"
 #include "sdf_utils.h"
+#include "resources.h"
 
 #define VIRTUAL_SCREEN_HEIGHT 256
 
@@ -34,6 +40,9 @@
 
 #define SECONDS_PER_CHARACTER 0.1f
 
+bool FileMissing(const char *path);
+void DrawWarningText(const char *text, int fontSize, int y, Color color);
+bool EnsureResourcesExist(void);
 Rectangle GetRenderSrc(int screenWidth, int screenHeight);
 Rectangle GetRenderDest(int screenWidth, int screenHeight);
 float NoiseifyPosition(float position);
@@ -65,20 +74,19 @@ int main(void) {
     int mouseSpeedY = 150;
 
     SetConfigFlags(FLAG_VSYNC_HINT | FLAG_WINDOW_RESIZABLE);
-    InitWindow(640, 480, "HEL Underground");
     SetExitKey(KEY_F4);
+    InitWindow(640, 480, "HEL Underground");
 
-    // TODO: For Raspberry Pi compatibility, add OpenGL ES version of the shader
-    // (it's probably enough to just load the shaders and switch
-    // around the #version to "100 es")
+    if (!EnsureResourcesExist()) {
+        return 0;
+    }
 
-    // TODO: Add an error message state for missing shader file
-    // ("you seem to be missing sdf_shader.glsl! It should've come
-    // with the download." or something)
+    bool clearFontEnabled = false;
+    Font vt323Font = LoadFontEx(resourcePaths[RESOURCE_VT323], 72, 0, 0);
+    Font openSansFont = LoadFontEx(resourcePaths[RESOURCE_OPEN_SANS], 72, 0, 0);
+    Font mainFont = vt323Font;
 
-    Font mainFont = LoadFontEx("vt323.ttf", 72, 0, 0);
-
-    Shader sdfShader = LoadShader(0, "sdf_shader.glsl");
+    Shader sdfShader = LoadShader(0, resourcePaths[RESOURCE_SHADER]);
     int resolutionLocation = GetShaderLocation(sdfShader, "resolution");
     int cameraPositionLocation = GetShaderLocation(sdfShader, "cameraPosition");
     int cameraRotationLocation = GetShaderLocation(sdfShader, "cameraRotation");
@@ -104,6 +112,15 @@ int main(void) {
         if (IsKeyPressed(KEY_B)) {
             // Toggle bobbing
             bobbingIntensity = bobbingIntensity > 0.5f ? 0.0f : 1.0f;
+        }
+
+        if (IsKeyPressed(KEY_T)) {
+            clearFontEnabled = !clearFontEnabled;
+            if (clearFontEnabled) {
+                mainFont = openSansFont;
+            } else {
+                mainFont = vt323Font;
+            }
         }
 
         // Turn around
@@ -279,6 +296,7 @@ int main(void) {
                     if (index >= 0 && index < COMMENT_LINES) {
                         const char *line =
                             narratorComments[narrationStage][index];
+                        // TODO: Darkened subtitle backgrounds
                         DisplaySubtitle(mainFont, line, fontSize, y);
                         y += fontSize;
                     }
@@ -296,10 +314,65 @@ int main(void) {
     UnloadRenderTexture(targetTex);
     UnloadTexture(targetTex.texture);
     UnloadShader(sdfShader);
-    UnloadFont(mainFont);
+    UnloadFont(openSansFont);
+    UnloadFont(vt323Font);
 
     CloseWindow();
     return 0;
+}
+
+bool FileMissing(const char *path) {
+    FILE *file = fopen(path, "r");
+    if (file == NULL) {
+        return true;
+    }
+    fclose(file);
+    return false;
+}
+
+void DrawWarningText(const char *text, int fontSize, int y, Color color) {
+    int height = GetScreenHeight();
+    fontSize = fontSize * height / 480;
+    y = y * height / 480;
+    int width = MeasureText(text, fontSize);
+    int x = (GetScreenWidth() - width) / 2;
+    DrawText(text, x, y, fontSize, color);
+}
+
+bool EnsureResourcesExist(void) {
+    bool fileLoaded[RESOURCE_COUNT] = { false };
+    bool missingFiles = true;
+    double lastFileCheck = 0.0;
+    while (missingFiles) {
+        if (WindowShouldClose()) {
+            return false;
+        }
+
+        double time = GetTime();
+        if (time < lastFileCheck + 0.1) {
+            lastFileCheck = time;
+            missingFiles = false;
+            for (int i = 0; i < RESOURCE_COUNT; i++) {
+                bool missing = FileMissing(resourcePaths[i]);
+                fileLoaded[i] = !missing;
+                missingFiles |= missing;
+            }
+        }
+
+        BeginDrawing();
+        ClearBackground((Color){ 0x44, 0x11, 0x11, 0xFF });
+        Color textColor = (Color){ 0xEE, 0xEE, 0x88, 0xFF };
+        DrawWarningText("Missing files:", 64, 100, textColor);
+        int warningY = 175;
+        for (int i = 0; i < RESOURCE_COUNT; i++) {
+            if (!fileLoaded[i]) {
+                DrawWarningText(resourcePaths[i], 32, warningY, textColor);
+                warningY += 48;
+            }
+        }
+        EndDrawing();
+    }
+    return true;
 }
 
 Rectangle GetRenderSrc(int screenWidth, int screenHeight) {

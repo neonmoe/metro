@@ -12,6 +12,8 @@ The game takes about 25 minutes to walk through completely.
 
 #### Configuration keys
 - B to toggle head bobbing animation
+- T to toggle the font (between VT323, which fits the game better
+  aesthetically, and Open Sans, which is easier to read)
 
 ### Building
 Just run the script relevant to your operating system. If it doesn't
