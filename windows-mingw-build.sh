@@ -1,6 +1,6 @@
 #!/bin/sh
 # Change your executable name here
-GAME_NAME="game.exe"
+GAME_NAME="metro.exe"
 
 # Set your sources here (relative paths!)
 # Example with two source folders:
@@ -93,7 +93,7 @@ OUTPUT_DIR="builds/windows-mingw"
 COMPILATION_FLAGS="-std=c99 -Os -flto"
 FINAL_COMPILE_FLAGS="-s"
 WARNING_FLAGS="-Wall -Wextra -Wpedantic"
-LINK_FLAGS="-flto -lkernel32 -luser32 -lshell32 -lwinmm -lgdi32 -lopengl32"
+LINK_FLAGS="-flto -lkernel32 -luser32 -lshell32 -lwinmm -lgdi32 -lopengl32 -mwindows"
 # Debug changes to flags
 if [ -n "$BUILD_DEBUG" ]; then
     OUTPUT_DIR="builds-debug/windows-mingw"
@@ -110,9 +110,9 @@ else
 fi
 
 # Create the raylib cache directory
-TEMP_DIR="temp/release"
+TEMP_DIR="temp/release-mingw"
 if [ -n "$BUILD_DEBUG" ]; then
-    TEMP_DIR="temp/debug"
+    TEMP_DIR="temp/debug-mingw"
 fi
 # If there's a -c flag, remove the cache
 if [ -d "$TEMP_DIR" ] && [ -n "$BUILD_ALL" ]; then
@@ -150,10 +150,14 @@ fi
 rm *.o
 [ -z "$QUIET" ] && echo "COMPILE-INFO: Game compiled into an executable in: $OUTPUT_DIR/"
 
-[ -f "sdf_shader.glsl" ] && rm sdf_shader.glsl
-cp $ROOT_DIR/src/sdf_shader.glsl sdf_shader.glsl
-[ ! -f "open_sans.ttf" ] && cp $ROOT_DIR/vendor/open-sans/open_sans.ttf open_sans.ttf
-[ ! -f "vt323.ttf" ] && cp $ROOT_DIR/vendor/vt323/vt323.ttf vt323.ttf
+mkdir -p metro_assets
+cd metro_assets
+cp -r $ROOT_DIR/src/shaders .
+cp -r $ROOT_DIR/src/sfx .
+mkdir -p fonts
+cp $ROOT_DIR/vendor/vt323/vt323.ttf fonts/
+cp $ROOT_DIR/vendor/open-sans/open_sans.ttf fonts/
+cd ..
 [ -z "$QUIET" ] && echo "COMPILE-INFO: Game resources copied into: $OUTPUT_DIR/"
 
 if [ -n "$STRIP_IT" ]; then

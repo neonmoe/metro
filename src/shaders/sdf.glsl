@@ -162,6 +162,14 @@ SDFSample sdf(vec3 samplePos, bool ignoreLightMeshes) {
         samplePos = transformFromMetroSpace(samplePos);
     }
 
+    // Currently the scene consists of:
+    // - the tunnel
+    // - the lights
+    // - the rails
+    // - and the planks below the rails
+    // Scene additions TODO:
+    // - rocks/gravel
+    // - fence at the end
     SDFSample samples[OBJECTS_COUNT] = SDFSample[OBJECTS_COUNT]
         (ignoreLightMeshes ? SDFSample(10000.0, vec3(0.0, 0.0, 0.0)) : sdfLightMeshes(samplePos),
          sdfTunnel(samplePos),
@@ -213,7 +221,6 @@ float get_shadow(vec3 samplePos, vec3 lightPos) {
     return 0.0;
 }
 
-// TODO: Add specularity
 // Specular should probably be passed as a paramenter, and sourced from SDFSample
 float get_brightness(vec3 samplePos, vec3 normal, float fog) {
     float ambient = 0.1;
@@ -229,7 +236,7 @@ float get_brightness(vec3 samplePos, vec3 normal, float fog) {
     return min(1.0, diffuse) + ambient;
 }
 
-// TODO: Improve the AO algorithm, it's a bit dumb currently
+// TODO: Improve the AO algorithm/remove it
 float get_ambient_occlusion(vec3 samplePos, vec3 normal) {
     // Cheap hack to avoid wall artifacts:
     if (normal.y == 0.0) {

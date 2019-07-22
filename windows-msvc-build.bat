@@ -1,6 +1,6 @@
 @echo off
 REM Change your executable name here
-set GAME_NAME=game.exe
+set GAME_NAME=metro.exe
 
 REM Set your sources here (relative paths!)
 REM Example with two source folders:
@@ -199,10 +199,21 @@ del *.obj
 IF NOT DEFINED QUIET echo COMPILE-INFO: Game compiled into an executable in: !OUTPUT_DIR!\
 
 REM Copy resources
-IF EXIST "sdf_shader.glsl" del sdf_shader.glsl
-cp !ROOT_DIR!\src\sdf_shader.glsl sdf_shader.glsl
-IF NOT EXIST "open_sans.ttf" cp !ROOT_DIR!\vendor\open-sans\open_sans.ttf open_sans.ttf
-IF NOT EXIST "vt323.ttf" cp !ROOT_DIR!\vendor\vt323\vt323.ttf vt323.ttf
+IF NOT EXIST metro_assets mkdir metro_assets
+cd metro_assets
+IF NOT EXIST shaders mkdir shaders
+IF EXIST "shaders\sdf_shader.glsl" del shaders\sdf_shader.glsl
+cp !ROOT_DIR!\src\shaders\sdf.glsl shaders\sdf.glsl
+IF NOT EXIST fonts mkdir fonts
+IF NOT EXIST "open_sans.ttf" cp !ROOT_DIR!\vendor\open-sans\open_sans.ttf fonts\open_sans.ttf
+IF NOT EXIST "vt323.ttf" cp !ROOT_DIR!\vendor\vt323\vt323.ttf fonts\vt323.ttf
+IF NOT EXIST sfx mkdir sfx
+IF NOT EXIST "sfx\footstep01.ogg" cp !ROOT_DIR!\src\sfx\footstep01.ogg sfx\footstep01.ogg
+IF NOT EXIST "sfx\footstep02.ogg" cp !ROOT_DIR!\src\sfx\footstep02.ogg sfx\footstep02.ogg
+IF NOT EXIST "sfx\footstep03.ogg" cp !ROOT_DIR!\src\sfx\footstep03.ogg sfx\footstep03.ogg
+IF NOT EXIST "sfx\footstep04.ogg" cp !ROOT_DIR!\src\sfx\footstep04.ogg sfx\footstep04.ogg
+IF NOT EXIST "sfx\footstep05.ogg" cp !ROOT_DIR!\src\sfx\footstep05.ogg sfx\footstep05.ogg
+cd ..
 IF NOT DEFINED QUIET echo COMPILE-INFO: Game resources copied into: !OUTPUT_DIR!\
 
 REM Run upx

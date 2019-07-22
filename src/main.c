@@ -306,7 +306,6 @@ int main(void) {
                     if (index >= 0 && index < COMMENT_LINES) {
                         const char *line =
                             narratorComments[narrationStage][index];
-                        // TODO: Darkened subtitle backgrounds
                         DisplaySubtitle(mainFont, line, fontSize, y);
                         y += fontSize;
                     }
@@ -352,7 +351,7 @@ void DrawWarningText(const char *text, int fontSize, int y, Color color) {
 bool EnsureResourcesExist(void) {
     bool fileLoaded[RESOURCE_COUNT] = { false };
     bool missingFiles = true;
-    double lastFileCheck = 0.0;
+    double lastFileCheck = -1.0;
     while (missingFiles) {
         if (WindowShouldClose()) {
             return false;
@@ -367,20 +366,20 @@ bool EnsureResourcesExist(void) {
                 fileLoaded[i] = !missing;
                 missingFiles |= missing;
             }
-        }
-
-        BeginDrawing();
-        ClearBackground((Color){ 0x44, 0x11, 0x11, 0xFF });
-        Color textColor = (Color){ 0xEE, 0xEE, 0x88, 0xFF };
-        DrawWarningText("Missing files:", 64, 100, textColor);
-        int warningY = 200;
-        for (int i = 0; i < RESOURCE_COUNT; i++) {
-            if (!fileLoaded[i]) {
-                DrawWarningText(resourcePaths[i], 32, warningY, textColor);
-                warningY += 48;
+        } else {
+            BeginDrawing();
+            ClearBackground((Color){ 0x44, 0x11, 0x11, 0xFF });
+            Color textColor = (Color){ 0xEE, 0xEE, 0x88, 0xFF };
+            DrawWarningText("Missing files:", 64, 100, textColor);
+            int warningY = 200;
+            for (int i = 0; i < RESOURCE_COUNT; i++) {
+                if (!fileLoaded[i]) {
+                    DrawWarningText(resourcePaths[i], 32, warningY, textColor);
+                    warningY += 48;
+                }
             }
+            EndDrawing();
         }
-        EndDrawing();
     }
     return true;
 }
