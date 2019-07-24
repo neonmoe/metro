@@ -100,6 +100,17 @@
 #define MAX_SHADER_LOCATIONS    32      // Maximum number of predefined locations stored in shader struct
 #define MAX_MATERIAL_MAPS       12      // Maximum number of texture maps stored in shader struct
 
+// Allow custom memory allocators
+#ifndef RL_MALLOC
+    #define RL_MALLOC(sz)       malloc(sz)
+#endif
+#ifndef RL_CALLOC
+    #define RL_CALLOC(n,sz)     calloc(n,sz)
+#endif
+#ifndef RL_FREE
+    #define RL_FREE(p)          free(p)
+#endif
+
 // NOTE: MSC C++ compiler does not support compound literals (C99 feature)
 // Plain structures in C++ (without constructors) can be initialized from { } initializers.
 #if defined(__cplusplus)
@@ -278,7 +289,7 @@ typedef struct Camera3D {
     int type;               // Camera type, defines projection type: CAMERA_PERSPECTIVE or CAMERA_ORTHOGRAPHIC
 } Camera3D;
 
-#define Camera Camera3D     // Camera type fallback, defaults to Camera3D
+typedef Camera3D Camera;    // Camera type fallback, defaults to Camera3D
 
 // Camera2D type, defines a 2d camera
 typedef struct Camera2D {
@@ -287,12 +298,6 @@ typedef struct Camera2D {
     float rotation;         // Camera rotation in degrees
     float zoom;             // Camera zoom (scaling), should be 1.0f by default
 } Camera2D;
-
-// Bounding box type
-typedef struct BoundingBox {
-    Vector3 min;            // Minimum vertex box-corner
-    Vector3 max;            // Maximum vertex box-corner
-} BoundingBox;
 
 // Vertex data definning a mesh
 // NOTE: Data stored in CPU memory (and GPU)
@@ -393,6 +398,12 @@ typedef struct RayHitInfo {
     Vector3 normal;         // Surface normal of hit
 } RayHitInfo;
 
+// Bounding box type
+typedef struct BoundingBox {
+    Vector3 min;            // Minimum vertex box-corner
+    Vector3 max;            // Maximum vertex box-corner
+} BoundingBox;
+
 // Wave type, defines audio wave data
 typedef struct Wave {
     unsigned int sampleCount;   // Number of samples
@@ -442,16 +453,6 @@ typedef struct VrDeviceInfo {
     float lensDistortionValues[4];  // HMD lens distortion constant parameters
     float chromaAbCorrection[4];    // HMD chromatic aberration correction parameters
 } VrDeviceInfo;
-
-// VR Stereo rendering configuration for simulator
-typedef struct VrStereoConfig {
-    RenderTexture2D stereoFbo;      // VR stereo rendering framebuffer
-    Shader distortionShader;        // VR stereo rendering distortion shader
-    Matrix eyesProjection[2];       // VR stereo rendering eyes projection matrices
-    Matrix eyesViewOffset[2];       // VR stereo rendering eyes view offset matrices
-    int eyeViewportRight[4];        // VR stereo rendering right eye viewport [x, y, w, h]
-    int eyeViewportLeft[4];         // VR stereo rendering left eye viewport [x, y, w, h]
-} VrStereoConfig;
 
 //----------------------------------------------------------------------------------
 // Enumerators Definition
@@ -618,83 +619,56 @@ typedef enum {
     GAMEPAD_PLAYER4     = 3
 } GamepadNumber;
 
-// PS3 USB Controller Buttons
-// TODO: Provide a generic way to list gamepad controls schemes,
-// defining specific controls schemes is not a good option
+// Gamepad Buttons
 typedef enum {
-    GAMEPAD_PS3_BUTTON_TRIANGLE = 0,
-    GAMEPAD_PS3_BUTTON_CIRCLE   = 1,
-    GAMEPAD_PS3_BUTTON_CROSS    = 2,
-    GAMEPAD_PS3_BUTTON_SQUARE   = 3,
-    GAMEPAD_PS3_BUTTON_L1       = 6,
-    GAMEPAD_PS3_BUTTON_R1       = 7,
-    GAMEPAD_PS3_BUTTON_L2       = 4,
-    GAMEPAD_PS3_BUTTON_R2       = 5,
-    GAMEPAD_PS3_BUTTON_START    = 8,
-    GAMEPAD_PS3_BUTTON_SELECT   = 9,
-    GAMEPAD_PS3_BUTTON_PS       = 12,
-    GAMEPAD_PS3_BUTTON_UP       = 24,
-    GAMEPAD_PS3_BUTTON_RIGHT    = 25,
-    GAMEPAD_PS3_BUTTON_DOWN     = 26,
-    GAMEPAD_PS3_BUTTON_LEFT     = 27
-} GamepadPS3Button;
+    // This is here just for error checking
+    GAMEPAD_BUTTON_UNKNOWN = 0,
 
-// PS3 USB Controller Axis
-typedef enum {
-    GAMEPAD_PS3_AXIS_LEFT_X     = 0,
-    GAMEPAD_PS3_AXIS_LEFT_Y     = 1,
-    GAMEPAD_PS3_AXIS_RIGHT_X    = 2,
-    GAMEPAD_PS3_AXIS_RIGHT_Y    = 5,
-    GAMEPAD_PS3_AXIS_L2         = 3,    // [1..-1] (pressure-level)
-    GAMEPAD_PS3_AXIS_R2         = 4     // [1..-1] (pressure-level)
-} GamepadPS3Axis;
+    // This is normally [A,B,X,Y]/[Circle,Triangle,Square,Cross]
+    // No support for 6 button controllers though..
+    GAMEPAD_BUTTON_LEFT_FACE_UP,
+    GAMEPAD_BUTTON_LEFT_FACE_RIGHT,
+    GAMEPAD_BUTTON_LEFT_FACE_DOWN,
+    GAMEPAD_BUTTON_LEFT_FACE_LEFT,
+  
+    // This is normally a DPAD
+    GAMEPAD_BUTTON_RIGHT_FACE_UP,
+    GAMEPAD_BUTTON_RIGHT_FACE_RIGHT,
+    GAMEPAD_BUTTON_RIGHT_FACE_DOWN,
+    GAMEPAD_BUTTON_RIGHT_FACE_LEFT,
 
-// Xbox360 USB Controller Buttons
-typedef enum {
-    GAMEPAD_XBOX_BUTTON_A       = 0,
-    GAMEPAD_XBOX_BUTTON_B       = 1,
-    GAMEPAD_XBOX_BUTTON_X       = 2,
-    GAMEPAD_XBOX_BUTTON_Y       = 3,
-    GAMEPAD_XBOX_BUTTON_LB      = 4,
-    GAMEPAD_XBOX_BUTTON_RB      = 5,
-    GAMEPAD_XBOX_BUTTON_SELECT  = 6,
-    GAMEPAD_XBOX_BUTTON_START   = 7,
-    GAMEPAD_XBOX_BUTTON_HOME    = 8,
-    GAMEPAD_XBOX_BUTTON_UP      = 10,
-    GAMEPAD_XBOX_BUTTON_RIGHT   = 11,
-    GAMEPAD_XBOX_BUTTON_DOWN    = 12,
-    GAMEPAD_XBOX_BUTTON_LEFT    = 13
-} GamepadXbox360Button;
+    // Triggers
+    GAMEPAD_BUTTON_LEFT_TRIGGER_1,
+    GAMEPAD_BUTTON_LEFT_TRIGGER_2,
+    GAMEPAD_BUTTON_RIGHT_TRIGGER_1,
+    GAMEPAD_BUTTON_RIGHT_TRIGGER_2,
 
-// Xbox360 USB Controller Axis,
-// NOTE: For Raspberry Pi, axis must be reconfigured
-typedef enum {
-    GAMEPAD_XBOX_AXIS_LEFT_X    = 0,    // [-1..1] (left->right)
-    GAMEPAD_XBOX_AXIS_LEFT_Y    = 1,    // [1..-1] (up->down)
-    GAMEPAD_XBOX_AXIS_RIGHT_X   = 2,    // [-1..1] (left->right)
-    GAMEPAD_XBOX_AXIS_RIGHT_Y   = 3,    // [1..-1] (up->down)
-    GAMEPAD_XBOX_AXIS_LT        = 4,    // [-1..1] (pressure-level)
-    GAMEPAD_XBOX_AXIS_RT        = 5     // [-1..1] (pressure-level)
-} GamepadXbox360Axis;
+    // These are buttons in the center of the gamepad
+    GAMEPAD_BUTTON_MIDDLE_LEFT,     //PS3 Select
+    GAMEPAD_BUTTON_MIDDLE,          //PS Button/XBOX Button
+    GAMEPAD_BUTTON_MIDDLE_RIGHT,    //PS3 Start
 
-// Android Gamepad Controller (SNES CLASSIC)
+    // These are the joystick press in buttons
+    GAMEPAD_BUTTON_LEFT_THUMB,
+    GAMEPAD_BUTTON_RIGHT_THUMB
+} GamepadButton;
+
 typedef enum {
-    GAMEPAD_ANDROID_DPAD_UP     = 19,
-    GAMEPAD_ANDROID_DPAD_DOWN   = 20,
-    GAMEPAD_ANDROID_DPAD_LEFT   = 21,
-    GAMEPAD_ANDROID_DPAD_RIGHT  = 22,
-    GAMEPAD_ANDROID_DPAD_CENTER = 23,
-    GAMEPAD_ANDROID_BUTTON_A    = 96,
-    GAMEPAD_ANDROID_BUTTON_B    = 97,
-    GAMEPAD_ANDROID_BUTTON_C    = 98,
-    GAMEPAD_ANDROID_BUTTON_X    = 99,
-    GAMEPAD_ANDROID_BUTTON_Y    = 100,
-    GAMEPAD_ANDROID_BUTTON_Z    = 101,
-    GAMEPAD_ANDROID_BUTTON_L1   = 102,
-    GAMEPAD_ANDROID_BUTTON_R1   = 103,
-    GAMEPAD_ANDROID_BUTTON_L2   = 104,
-    GAMEPAD_ANDROID_BUTTON_R2   = 105
-} GamepadAndroid;
+    // This is here just for error checking
+    GAMEPAD_AXIS_UNKNOWN = 0,
+
+    // Left stick
+    GAMEPAD_AXIS_LEFT_X,
+    GAMEPAD_AXIS_LEFT_Y,
+
+    // Right stick
+    GAMEPAD_AXIS_RIGHT_X,
+    GAMEPAD_AXIS_RIGHT_Y,
+
+    // Pressure levels for the back triggers
+    GAMEPAD_AXIS_LEFT_TRIGGER,      // [1..-1] (pressure-level)
+    GAMEPAD_AXIS_RIGHT_TRIGGER      // [1..-1] (pressure-level)
+} GamepadAxis;
 
 // Shader location point type
 typedef enum {
@@ -860,16 +834,6 @@ typedef enum {
     CAMERA_ORTHOGRAPHIC
 } CameraType;
 
-// Head Mounted Display devices
-typedef enum {
-    HMD_DEFAULT_DEVICE = 0,
-    HMD_OCULUS_RIFT_DK2,
-    HMD_OCULUS_RIFT_CV1,
-    HMD_OCULUS_GO,
-    HMD_VALVE_HTC_VIVE,
-    HMD_SONY_PSVR
-} VrDeviceType;
-
 // Type of n-patch
 typedef enum {
     NPT_9PATCH = 0,         // Npatch defined by 3x3 tiles
@@ -945,7 +909,7 @@ RLAPI Ray GetMouseRay(Vector2 mousePosition, Camera camera);      // Returns a r
 RLAPI Vector2 GetWorldToScreen(Vector3 position, Camera camera);  // Returns the screen space position for a 3d world space position
 RLAPI Matrix GetCameraMatrix(Camera camera);                      // Returns camera transform matrix (view matrix)
 
-// timing-related functions
+// Timing-related functions
 RLAPI void SetTargetFPS(int fps);                                 // Set target FPS (maximum)
 RLAPI int GetFPS(void);                                           // Returns current FPS
 RLAPI float GetFrameTime(void);                                   // Returns time in seconds for last frame drawn
@@ -1067,6 +1031,7 @@ RLAPI void DrawLine(int startPosX, int startPosY, int endPosX, int endPosY, Colo
 RLAPI void DrawLineV(Vector2 startPos, Vector2 endPos, Color color);                                     // Draw a line (Vector version)
 RLAPI void DrawLineEx(Vector2 startPos, Vector2 endPos, float thick, Color color);                       // Draw a line defining thickness
 RLAPI void DrawLineBezier(Vector2 startPos, Vector2 endPos, float thick, Color color);                   // Draw a line using cubic-bezier curves in-out
+RLAPI void DrawLineStrip(Vector2 *points, int numPoints, Color color);                                   // Draw lines sequence
 RLAPI void DrawCircle(int centerX, int centerY, float radius, Color color);                              // Draw a color-filled circle
 RLAPI void DrawCircleSector(Vector2 center, float radius, int startAngle, int endAngle, int segments, Color color);     // Draw a piece of a circle
 RLAPI void DrawCircleSectorLines(Vector2 center, float radius, int startAngle, int endAngle, int segments, Color color);    // Draw circle sector outline
@@ -1088,9 +1053,8 @@ RLAPI void DrawRectangleRounded(Rectangle rec, float roundness, int segments, Co
 RLAPI void DrawRectangleRoundedLines(Rectangle rec, float roundness, int segments, int lineThick, Color color); // Draw rectangle with rounded edges outline
 RLAPI void DrawTriangle(Vector2 v1, Vector2 v2, Vector2 v3, Color color);                                // Draw a color-filled triangle
 RLAPI void DrawTriangleLines(Vector2 v1, Vector2 v2, Vector2 v3, Color color);                           // Draw triangle outline
+RLAPI void DrawTriangleFan(Vector2 *points, int numPoints, Color color);                                 // Draw a triangle fan defined by points
 RLAPI void DrawPoly(Vector2 center, int sides, float radius, float rotation, Color color);               // Draw a regular polygon (Vector version)
-RLAPI void DrawPolyEx(Vector2 *points, int numPoints, Color color);                                      // Draw a closed polygon defined by points
-RLAPI void DrawPolyExLines(Vector2 *points, int numPoints, Color color);                                 // Draw polygon lines
 
 RLAPI void SetShapesTexture(Texture2D texture, Rectangle source);                                        // Define default texture used to draw shapes
 
@@ -1210,11 +1174,14 @@ RLAPI void DrawTextRecEx(Font font, const char *text, Rectangle rec, float fontS
 RLAPI int MeasureText(const char *text, int fontSize);                                      // Measure string width for default font
 RLAPI Vector2 MeasureTextEx(Font font, const char *text, float fontSize, float spacing);    // Measure string size for Font
 RLAPI int GetGlyphIndex(Font font, int character);                                          // Get index position for a unicode character on font
+RLAPI int GetNextCodepoint(const char *text, int *count);                                   // Returns next codepoint in a UTF8 encoded string
+                                                                                            // NOTE: 0x3f(`?`) is returned on failure, `count` will hold the total number of bytes processed
 
 // Text strings management functions
 // NOTE: Some strings allocate memory internally for returned strings, just be careful!
 RLAPI bool TextIsEqual(const char *text1, const char *text2);                               // Check if two text string are equal
 RLAPI unsigned int TextLength(const char *text);                                            // Get text length, checks for '\0' ending
+RLAPI unsigned int TextCountCodepoints(const char *text);                                   // Get total number of characters (codepoints) in a UTF8 encoded string
 RLAPI const char *TextFormat(const char *text, ...);                                        // Text formatting with variables (sprintf style)
 RLAPI const char *TextSubtext(const char *text, int position, int length);                  // Get a piece of a text string
 RLAPI const char *TextReplace(char *text, const char *replace, const char *by);             // Replace text string (memory should be freed!)
@@ -1257,7 +1224,7 @@ RLAPI void DrawGizmo(Vector3 position);                                         
 
 // Model loading/unloading functions
 RLAPI Model LoadModel(const char *fileName);                                                            // Load model from files (meshes and materials)
-RLAPI Model LoadModelFromMesh(Mesh mesh);                                                               // Load model from generated mesh
+RLAPI Model LoadModelFromMesh(Mesh mesh);                                                               // Load model from generated mesh (default material)
 RLAPI void UnloadModel(Model model);                                                                    // Unload model from memory (RAM and/or VRAM)
 
 // Mesh loading/unloading functions
@@ -1330,7 +1297,7 @@ RLAPI Shader GetShaderDefault(void);                                      // Get
 RLAPI Texture2D GetTextureDefault(void);                                  // Get default texture
 
 // Shader configuration functions
-RLAPI int GetShaderLocation(Shader shader, const char *uniformName);              // Get shader uniform location
+RLAPI int GetShaderLocation(Shader shader, const char *uniformName);      // Get shader uniform location
 RLAPI void SetShaderValue(Shader shader, int uniformLoc, const void *value, int uniformType);               // Set shader uniform value
 RLAPI void SetShaderValueV(Shader shader, int uniformLoc, const void *value, int uniformType, int count);   // Set shader uniform value vector
 RLAPI void SetShaderValueMatrix(Shader shader, int uniformLoc, Matrix mat);         // Set shader uniform value (matrix 4x4)
@@ -1344,7 +1311,7 @@ RLAPI Matrix GetMatrixModelview();                                        // Get
 RLAPI Texture2D GenTextureCubemap(Shader shader, Texture2D skyHDR, int size);       // Generate cubemap texture from HDR texture
 RLAPI Texture2D GenTextureIrradiance(Shader shader, Texture2D cubemap, int size);   // Generate irradiance texture using cubemap data
 RLAPI Texture2D GenTexturePrefilter(Shader shader, Texture2D cubemap, int size);    // Generate prefilter texture using cubemap data
-RLAPI Texture2D GenTextureBRDF(Shader shader, int size);                  // Generate BRDF texture using cubemap data
+RLAPI Texture2D GenTextureBRDF(Shader shader, int size);                  // Generate BRDF texture
 
 // Shading begin/end functions
 RLAPI void BeginShaderMode(Shader shader);                                // Begin custom shader drawing
@@ -1355,10 +1322,10 @@ RLAPI void BeginScissorMode(int x, int y, int width, int height);         // Beg
 RLAPI void EndScissorMode(void);                                          // End scissor mode
 
 // VR control functions
-RLAPI VrDeviceInfo GetVrDeviceInfo(int vrDeviceType);   // Get VR device information for some standard devices
-RLAPI void InitVrSimulator(VrDeviceInfo info);          // Init VR simulator for selected device parameters
-RLAPI void UpdateVrTracking(Camera *camera);            // Update VR tracking (position and orientation) and camera
+RLAPI void InitVrSimulator(void);                       // Init VR simulator for selected device parameters
 RLAPI void CloseVrSimulator(void);                      // Close VR simulator for current device
+RLAPI void UpdateVrTracking(Camera *camera);            // Update VR tracking (position and orientation) and camera
+RLAPI void SetVrConfiguration(VrDeviceInfo info, Shader distortion);      // Set stereo rendering configuration parameters 
 RLAPI bool IsVrSimulatorReady(void);                    // Detect if VR simulator is ready
 RLAPI void ToggleVrMode(void);                          // Enable/Disable VR experience
 RLAPI void BeginVrDrawing(void);                        // Begin VR simulator stereo rendering
@@ -1425,6 +1392,12 @@ RLAPI bool IsAudioStreamPlaying(AudioStream stream);                  // Check i
 RLAPI void StopAudioStream(AudioStream stream);                       // Stop audio stream
 RLAPI void SetAudioStreamVolume(AudioStream stream, float volume);    // Set volume for audio stream (1.0 is max level)
 RLAPI void SetAudioStreamPitch(AudioStream stream, float pitch);      // Set pitch for audio stream (1.0 is base level)
+
+//------------------------------------------------------------------------------------
+// Network (Module: network)
+//------------------------------------------------------------------------------------
+
+// IN PROGRESS: Check rnet.h for reference
 
 #if defined(__cplusplus)
 }
