@@ -22,6 +22,7 @@
 #include <math.h>
 #include <string.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 #include "raylib.h"
 #include "raymath.h"
@@ -35,7 +36,7 @@
 #define WALK_SPEED 1.4f
 #define RUN_SPEED 4.2f
 #define HEAD_BOB_MAGNITUDE 0.05f
-#define HEAD_BOB_FREQUENCY 1.6f
+#define HEAD_BOB_FREQUENCY 1.3f
 #define COMMENT_LENGTH (DEFAULT_MAX_DISTANCE / COMMENTS_COUNT)
 
 #define SECONDS_PER_CHARACTER 0.1f
@@ -47,6 +48,7 @@ Rectangle GetRenderSrc(int screenWidth, int screenHeight);
 Rectangle GetRenderDest(int screenWidth, int screenHeight);
 Vector3 GetLegalPlayerMovement(Vector3 position, Vector3 movement, float maxDistance);
 float NoiseifyPosition(float position);
+Sound GetFootstepSound(Sound footstepSounds[]);
 void DisplaySubtitle(Font font, const char *subtitle, float fontSize, float y);
 int GetLine(float narrationTime, int narrationStage, int linesPerScreen);
 
@@ -58,6 +60,7 @@ int main(void) {
     float headBobAmount = 0.0f;
     bool autoMove = false;
     bool running = false;
+    float previousBobTime = 0.0f;
 
     // Mouselook values
     int mouseX = -1;
@@ -74,12 +77,26 @@ int main(void) {
     int mouseSpeedX = 150;
     int mouseSpeedY = 150;
 
+    SetTraceLogLevel(LOG_WARNING);
     SetConfigFlags(FLAG_VSYNC_HINT | FLAG_WINDOW_RESIZABLE);
     SetExitKey(KEY_F4);
     InitWindow(640, 480, "HEL Underground");
+    InitAudioDevice();
 
     if (!EnsureResourcesExist()) {
         return 0;
+    }
+
+    Sound footstepSounds[] = {
+        LoadSound(resourcePaths[RESOURCE_FOOTSTEP_1]),
+        LoadSound(resourcePaths[RESOURCE_FOOTSTEP_2]),
+        LoadSound(resourcePaths[RESOURCE_FOOTSTEP_3]),
+        LoadSound(resourcePaths[RESOURCE_FOOTSTEP_4]),
+        LoadSound(resourcePaths[RESOURCE_FOOTSTEP_5])
+    };
+
+    for (int i = 0; i < FOOTSTEP_SOUND_COUNT; i++) {
+        SetSoundVolume(footstepSounds[i], 0.1f);
     }
 
     bool clearFontEnabled = false;
@@ -252,6 +269,11 @@ int main(void) {
         cameraPosition[1] = Lerp(cameraPosition[1], height, 10.0f * delta);
         cameraPosition[1] += headBobAmount;
 
+        if (cosf(previousBobTime) < 0 && cosf(bobTime) >= 0) {
+            PlaySound(GetFootstepSound(footstepSounds));
+        }
+        previousBobTime = bobTime;
+
         // Activate location-based actions
         // TODO: Add a fence or something at the end.
         float lightMaxDistance = maxDistance - 9.0f;
@@ -326,6 +348,11 @@ int main(void) {
     UnloadFont(openSansFont);
     UnloadFont(vt323Font);
 
+    for (int i = 0; i < FOOTSTEP_SOUND_COUNT; i++) {
+        UnloadSound(footstepSounds[i]);
+    }
+
+    CloseAudioDevice();
     CloseWindow();
     return 0;
 }
@@ -425,6 +452,18 @@ Vector3 GetLegalPlayerMovement(Vector3 position, Vector3 movement, float maxDist
 
 float NoiseifyPosition(float position) {
     return position + (int)(position * 4.1) % 14 - 7;
+}
+
+static int _lastFootstepIndex = 0;
+Sound GetFootstepSound(Sound footstepSounds[]) {
+    int index = rand() % FOOTSTEP_SOUND_COUNT;
+    if (index == _lastFootstepIndex) {
+        index = (index + 1) % FOOTSTEP_SOUND_COUNT;
+    }
+    _lastFootstepIndex = index;
+    Sound sound = footstepSounds[index];
+    SetSoundPitch(sound, 1.0f + cosf(rand() / RAND_MAX) * 0.1f);
+    return sound;
 }
 
 void DisplaySubtitle(Font font, const char *subtitle, float fontSize, float y) {
