@@ -41,14 +41,24 @@
 
 #define SECONDS_PER_CHARACTER 0.1f
 
+typedef struct {
+    Font mainFont;
+    Font clearFont;
+    bool clearFontEnabled;
+    Font *currentFont;
+} FontSetting;
+
 bool FileMissing(const char *path);
 void DrawWarningText(const char *text, int fontSize, int y, Color color);
 bool EnsureResourcesExist(void);
+bool ShowMainMenu(FontSetting *fontSetting, float *volume, float *fov, 
+                  float *bobIntensity, int *mouseSpeedX, int *mouseSpeedY);
+void SwitchFont(FontSetting *fontSetting);
 Rectangle GetRenderSrc(int screenWidth, int screenHeight);
 Rectangle GetRenderDest(int screenWidth, int screenHeight);
 Vector3 GetLegalPlayerMovement(Vector3 position, Vector3 movement, float maxDistance);
 float NoiseifyPosition(float position);
-Sound GetFootstepSound(Sound footstepSounds[]);
+void PlayFootstepSound(float volume, bool running, Sound footstepSounds[]);
 void DisplaySubtitle(Font font, const char *subtitle, float fontSize, float y);
 int GetLine(float narrationTime, int narrationStage, int linesPerScreen);
 
@@ -73,6 +83,8 @@ int main(void) {
     float narrationTime = 0.0f;
 
     // Runtime configurable options
+    float volume = 0.2f;
+    float fieldOfView = 80.0f;
     float bobbingIntensity = 1.0f;
     int mouseSpeedX = 150;
     int mouseSpeedY = 150;
@@ -87,22 +99,16 @@ int main(void) {
         return 0;
     }
 
-    Sound footstepSounds[] = {
-        LoadSound(resourcePaths[RESOURCE_FOOTSTEP_1]),
-        LoadSound(resourcePaths[RESOURCE_FOOTSTEP_2]),
-        LoadSound(resourcePaths[RESOURCE_FOOTSTEP_3]),
-        LoadSound(resourcePaths[RESOURCE_FOOTSTEP_4]),
-        LoadSound(resourcePaths[RESOURCE_FOOTSTEP_5])
-    };
-
+    Sound footstepSounds[FOOTSTEP_SOUND_COUNT];
     for (int i = 0; i < FOOTSTEP_SOUND_COUNT; i++) {
-        SetSoundVolume(footstepSounds[i], 0.1f);
+        footstepSounds[i] = LoadSound(resourcePaths[RESOURCE_FOOTSTEP_1 + i]);
     }
 
-    bool clearFontEnabled = false;
     Font vt323Font = LoadFontEx(resourcePaths[RESOURCE_VT323], 72, 0, 0);
     Font openSansFont = LoadFontEx(resourcePaths[RESOURCE_OPEN_SANS], 72, 0, 0);
-    Font mainFont = vt323Font;
+    FontSetting fontSetting = {
+        vt323Font, openSansFont, false, &vt323Font
+    };
 
     Shader sdfShader = LoadShader(0, resourcePaths[RESOURCE_SHADER]);
     int resolutionLocation = GetShaderLocation(sdfShader, "resolution");
@@ -119,8 +125,12 @@ int main(void) {
     float maxDistance = DEFAULT_MAX_DISTANCE;
     SetShaderValue(sdfShader, maxDistanceLocation, &maxDistance, UNIFORM_FLOAT);
 
+    bool mainMenuClosed = ShowMainMenu(&fontSetting, &volume, 
+                                       &fieldOfView, &bobbingIntensity, 
+                                       &mouseSpeedX, &mouseSpeedY);
+
     float lastTime = (float)GetTime();
-    while (!WindowShouldClose()) {
+    while (!WindowShouldClose() && !mainMenuClosed) {
         float currentTime = (float)GetTime();
         float delta = currentTime - lastTime;
         delta = delta > 0.03f ? 0.03f : delta;
@@ -133,12 +143,18 @@ int main(void) {
         }
 
         if (IsKeyPressed(KEY_T)) {
-            clearFontEnabled = !clearFontEnabled;
-            if (clearFontEnabled) {
-                mainFont = openSansFont;
-            } else {
-                mainFont = vt323Font;
-            }
+            SwitchFont(&fontSetting);
+        }
+
+        // Menu access
+        if (IsKeyPressed(KEY_ESCAPE)) {
+            mouseLookEnabled = false;
+            EnableCursor();
+            // TODO: Pass the latest frame to the main menu so it can be shown
+            // in the background, perhaps less saturated and darkened?
+            mainMenuClosed = ShowMainMenu(&fontSetting, &volume, 
+                                          &fieldOfView, &bobbingIntensity, 
+                                          &mouseSpeedX, &mouseSpeedY);
         }
 
         // Turn around
@@ -171,10 +187,6 @@ int main(void) {
         if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
             mouseLookEnabled = true;
             DisableCursor();
-        }
-        if (IsKeyPressed(KEY_ESCAPE)) {
-            mouseLookEnabled = false;
-            EnableCursor();
         }
         if (mouseLookEnabled) {
             float dx = (float)(GetMouseX() - mouseX) / GetScreenHeight() * mouseSpeedX;
@@ -245,6 +257,9 @@ int main(void) {
         cameraPosition[2] = Clamp(position.z, -10.0f, maxDistance + 10.0f);
 
         if (walking) {
+            if (walkingTime == 0.0f) {
+                PlayFootstepSound(volume, running, footstepSounds);
+            }
             walkingTime += delta;
         } else {
             walkingTime = 0.0f;
@@ -270,7 +285,7 @@ int main(void) {
         cameraPosition[1] += headBobAmount;
 
         if (cosf(previousBobTime) < 0 && cosf(bobTime) >= 0) {
-            PlaySound(GetFootstepSound(footstepSounds));
+            PlayFootstepSound(volume, running, footstepSounds);
         }
         previousBobTime = bobTime;
 
@@ -328,7 +343,8 @@ int main(void) {
                     if (index >= 0 && index < COMMENT_LINES) {
                         const char *line =
                             narratorComments[narrationStage][index];
-                        DisplaySubtitle(mainFont, line, fontSize, y);
+                        DisplaySubtitle(*fontSetting.currentFont,
+                                        line, fontSize, y);
                         y += fontSize;
                     }
                 }
@@ -411,6 +427,41 @@ bool EnsureResourcesExist(void) {
     return true;
 }
 
+bool ShowMainMenu(FontSetting *fontSetting, float *volume, float *fov, 
+                  float *bobIntensity, int *mouseSpeedX, int *mouseSpeedY) {
+    while (true) {
+        if (WindowShouldClose()) {
+            return true;
+        }
+
+        if (IsKeyPressed(KEY_P)) {
+            break;
+        }
+
+        BeginDrawing();
+        ClearBackground((Color){ 0x33, 0x33, 0x33, 0xFF });
+        Color textColor = (Color){ 0xEE, 0xEE, 0xEE, 0xFF };
+        DrawTextEx(*fontSetting->currentFont, "Main Menu", 
+                   (Vector2) { 64.0f, 100.0f }, 36, 0.0f, textColor);
+        DrawTextEx(*fontSetting->currentFont, "Press P to play", 
+                   (Vector2) { 64.0f, 150.0f }, 36, 0.0f, textColor);
+        DrawTextEx(*fontSetting->currentFont, "TODO: Make this an actual menu", 
+                   (Vector2) { 64.0f, 200.0f }, 36, 0.0f, textColor);
+        EndDrawing();
+    }
+    return false;
+}
+
+void SwitchFont(FontSetting *fontSetting) {
+    if (fontSetting->clearFontEnabled) {
+        fontSetting->clearFontEnabled = false;
+        fontSetting->currentFont = &fontSetting->mainFont;
+    } else {
+        fontSetting->clearFontEnabled = true;
+        fontSetting->currentFont = &fontSetting->clearFont;
+    }
+}
+
 Rectangle GetRenderSrc(int screenWidth, int screenHeight) {
     float ratio = (float)screenWidth / (float)screenHeight;
     float margin, width, height;
@@ -455,15 +506,17 @@ float NoiseifyPosition(float position) {
 }
 
 static int _lastFootstepIndex = 0;
-Sound GetFootstepSound(Sound footstepSounds[]) {
+void PlayFootstepSound(float volume, bool running, Sound footstepSounds[]) {
     int index = rand() % FOOTSTEP_SOUND_COUNT;
     if (index == _lastFootstepIndex) {
         index = (index + 1) % FOOTSTEP_SOUND_COUNT;
     }
     _lastFootstepIndex = index;
     Sound sound = footstepSounds[index];
-    SetSoundPitch(sound, 1.0f + cosf(rand() / RAND_MAX) * 0.1f);
-    return sound;
+    float runModifier = running ? 0.0f : 0.1f;
+    SetSoundPitch(sound, 1.0f + cosf(rand() / RAND_MAX) * 0.05f + runModifier);
+    SetSoundVolume(sound, volume);
+    PlaySound(sound);
 }
 
 void DisplaySubtitle(Font font, const char *subtitle, float fontSize, float y) {
