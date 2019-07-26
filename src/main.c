@@ -51,7 +51,7 @@ typedef struct {
 bool FileMissing(const char *path);
 void DrawWarningText(const char *text, int fontSize, int y, Color color);
 bool EnsureResourcesExist(void);
-bool ShowMainMenu(FontSetting *fontSetting, float *volume, float *fov, 
+bool ShowMainMenu(FontSetting *fontSetting, float *volume, float *fov,
                   float *bobIntensity, int *mouseSpeedX, int *mouseSpeedY);
 void SwitchFont(FontSetting *fontSetting);
 Rectangle GetRenderSrc(int screenWidth, int screenHeight);
@@ -125,8 +125,8 @@ int main(void) {
     float maxDistance = DEFAULT_MAX_DISTANCE;
     SetShaderValue(sdfShader, maxDistanceLocation, &maxDistance, UNIFORM_FLOAT);
 
-    bool mainMenuClosed = ShowMainMenu(&fontSetting, &volume, 
-                                       &fieldOfView, &bobbingIntensity, 
+    bool mainMenuClosed = ShowMainMenu(&fontSetting, &volume,
+                                       &fieldOfView, &bobbingIntensity,
                                        &mouseSpeedX, &mouseSpeedY);
 
     float lastTime = (float)GetTime();
@@ -152,8 +152,8 @@ int main(void) {
             EnableCursor();
             // TODO: Pass the latest frame to the main menu so it can be shown
             // in the background, perhaps less saturated and darkened?
-            mainMenuClosed = ShowMainMenu(&fontSetting, &volume, 
-                                          &fieldOfView, &bobbingIntensity, 
+            mainMenuClosed = ShowMainMenu(&fontSetting, &volume,
+                                          &fieldOfView, &bobbingIntensity,
                                           &mouseSpeedX, &mouseSpeedY);
         }
 
@@ -427,7 +427,7 @@ bool EnsureResourcesExist(void) {
     return true;
 }
 
-bool ShowMainMenu(FontSetting *fontSetting, float *volume, float *fov, 
+bool ShowMainMenu(FontSetting *fontSetting, float *volume, float *fov,
                   float *bobIntensity, int *mouseSpeedX, int *mouseSpeedY) {
     while (true) {
         if (WindowShouldClose()) {
@@ -441,11 +441,11 @@ bool ShowMainMenu(FontSetting *fontSetting, float *volume, float *fov,
         BeginDrawing();
         ClearBackground((Color){ 0x33, 0x33, 0x33, 0xFF });
         Color textColor = (Color){ 0xEE, 0xEE, 0xEE, 0xFF };
-        DrawTextEx(*fontSetting->currentFont, "Main Menu", 
+        DrawTextEx(*fontSetting->currentFont, "Main Menu",
                    (Vector2) { 64.0f, 100.0f }, 36, 0.0f, textColor);
-        DrawTextEx(*fontSetting->currentFont, "Press P to play", 
+        DrawTextEx(*fontSetting->currentFont, "Press P to play",
                    (Vector2) { 64.0f, 150.0f }, 36, 0.0f, textColor);
-        DrawTextEx(*fontSetting->currentFont, "TODO: Make this an actual menu", 
+        DrawTextEx(*fontSetting->currentFont, "TODO: Make this an actual menu",
                    (Vector2) { 64.0f, 200.0f }, 36, 0.0f, textColor);
         EndDrawing();
     }
