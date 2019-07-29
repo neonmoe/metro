@@ -7,4 +7,6 @@ tech demo. So this list isn't about making the game perfect, just shippable.
 - Ominous metro sounds / windy tunnel sounds now and then
 - The footstep sound could be recut to be a bit more consistent in
   time-to-impact
+- Also, maybe add echo instead of just the reverb? The footsteps don't sound
+  spacey enough yet.
 - FIXMEs
