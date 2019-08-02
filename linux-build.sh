@@ -149,7 +149,6 @@ rm *.o
 mkdir -p metro_assets
 cd metro_assets
 cp -r $ROOT_DIR/src/shaders .
-cp -r $ROOT_DIR/src/sfx .
 mkdir -p fonts
 cp $ROOT_DIR/vendor/vt323/vt323.ttf fonts/
 cp $ROOT_DIR/vendor/open-sans/open_sans.ttf fonts/

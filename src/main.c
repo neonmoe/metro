@@ -51,14 +51,13 @@ typedef struct {
 bool FileMissing(const char *path);
 void DrawWarningText(const char *text, int fontSize, int y, Color color);
 bool EnsureResourcesExist(void);
-bool ShowMainMenu(FontSetting *fontSetting, float *volume, float *fov,
-                  float *bobIntensity, int *mouseSpeedX, int *mouseSpeedY);
+bool ShowMainMenu(FontSetting *fontSetting, float *fov, float *bobIntensity,
+                  int *mouseSpeedX, int *mouseSpeedY);
 void SwitchFont(FontSetting *fontSetting);
 Rectangle GetRenderSrc(int screenWidth, int screenHeight);
 Rectangle GetRenderDest(int screenWidth, int screenHeight);
 Vector3 GetLegalPlayerMovement(Vector3 position, Vector3 movement, float maxDistance);
 float NoiseifyPosition(float position);
-void PlayFootstepSound(float volume, bool running, Sound footstepSounds[]);
 void DisplaySubtitle(Font font, const char *subtitle, float fontSize, float y);
 int GetLine(float narrationTime, int narrationStage, int linesPerScreen);
 
@@ -70,7 +69,6 @@ int main(void) {
     float headBobAmount = 0.0f;
     bool autoMove = false;
     bool running = false;
-    float previousBobTime = 0.0f;
 
     // Mouselook values
     int mouseX = -1;
@@ -83,7 +81,6 @@ int main(void) {
     float narrationTime = 0.0f;
 
     // Runtime configurable options
-    float volume = 0.2f;
     float fieldOfView = 80.0f;
     float bobbingIntensity = 1.0f;
     int mouseSpeedX = 150;
@@ -97,11 +94,6 @@ int main(void) {
 
     if (!EnsureResourcesExist()) {
         return 0;
-    }
-
-    Sound footstepSounds[FOOTSTEP_SOUND_COUNT];
-    for (int i = 0; i < FOOTSTEP_SOUND_COUNT; i++) {
-        footstepSounds[i] = LoadSound(resourcePaths[RESOURCE_FOOTSTEP_1 + i]);
     }
 
     Font vt323Font = LoadFontEx(resourcePaths[RESOURCE_VT323], 72, 0, 0);
@@ -125,7 +117,7 @@ int main(void) {
     float maxDistance = DEFAULT_MAX_DISTANCE;
     SetShaderValue(sdfShader, maxDistanceLocation, &maxDistance, UNIFORM_FLOAT);
 
-    bool mainMenuClosed = ShowMainMenu(&fontSetting, &volume,
+    bool mainMenuClosed = ShowMainMenu(&fontSetting,
                                        &fieldOfView, &bobbingIntensity,
                                        &mouseSpeedX, &mouseSpeedY);
 
@@ -152,7 +144,7 @@ int main(void) {
             EnableCursor();
             // TODO: Pass the latest frame to the main menu so it can be shown
             // in the background, perhaps less saturated and darkened?
-            mainMenuClosed = ShowMainMenu(&fontSetting, &volume,
+            mainMenuClosed = ShowMainMenu(&fontSetting,
                                           &fieldOfView, &bobbingIntensity,
                                           &mouseSpeedX, &mouseSpeedY);
         }
@@ -257,9 +249,6 @@ int main(void) {
         cameraPosition[2] = Clamp(position.z, -10.0f, maxDistance + 10.0f);
 
         if (walking) {
-            if (walkingTime == 0.0f) {
-                PlayFootstepSound(volume, running, footstepSounds);
-            }
             walkingTime += delta;
         } else {
             walkingTime = 0.0f;
@@ -283,11 +272,6 @@ int main(void) {
         }
         cameraPosition[1] = Lerp(cameraPosition[1], height, 10.0f * delta);
         cameraPosition[1] += headBobAmount;
-
-        if (cosf(previousBobTime) < 0 && cosf(bobTime) >= 0) {
-            PlayFootstepSound(volume, running, footstepSounds);
-        }
-        previousBobTime = bobTime;
 
         // Activate location-based actions
         // TODO: Add a fence or something at the end.
@@ -364,10 +348,6 @@ int main(void) {
     UnloadFont(openSansFont);
     UnloadFont(vt323Font);
 
-    for (int i = 0; i < FOOTSTEP_SOUND_COUNT; i++) {
-        UnloadSound(footstepSounds[i]);
-    }
-
     CloseAudioDevice();
     CloseWindow();
     return 0;
@@ -427,8 +407,8 @@ bool EnsureResourcesExist(void) {
     return true;
 }
 
-bool ShowMainMenu(FontSetting *fontSetting, float *volume, float *fov,
-                  float *bobIntensity, int *mouseSpeedX, int *mouseSpeedY) {
+bool ShowMainMenu(FontSetting *fontSetting, float *fov, float *bobIntensity,
+                  int *mouseSpeedX, int *mouseSpeedY) {
     while (true) {
         if (WindowShouldClose()) {
             return true;
@@ -503,20 +483,6 @@ Vector3 GetLegalPlayerMovement(Vector3 position, Vector3 movement, float maxDist
 
 float NoiseifyPosition(float position) {
     return position + (int)(position * 4.1) % 14 - 7;
-}
-
-static int _lastFootstepIndex = 0;
-void PlayFootstepSound(float volume, bool running, Sound footstepSounds[]) {
-    int index = rand() % FOOTSTEP_SOUND_COUNT;
-    if (index == _lastFootstepIndex) {
-        index = (index + 1) % FOOTSTEP_SOUND_COUNT;
-    }
-    _lastFootstepIndex = index;
-    Sound sound = footstepSounds[index];
-    float runModifier = running ? 0.0f : 0.1f;
-    SetSoundPitch(sound, 1.0f + cosf(rand() / RAND_MAX) * 0.05f + runModifier);
-    SetSoundVolume(sound, volume);
-    PlaySound(sound);
 }
 
 void DisplaySubtitle(Font font, const char *subtitle, float fontSize, float y) {
