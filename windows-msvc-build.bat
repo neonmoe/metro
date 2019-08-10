@@ -128,11 +128,13 @@ IF DEFINED BUILD_DEBUG (
   set OUTPUT_FLAG=/Fe: "!GAME_NAME!"
   REM _CRT_SECURE_NO_WARNINGS is defined because the CRT has deprecated some C standard functions for safety reasons
   set COMPILATION_FLAGS=/Od /Zi /D_CRT_SECURE_NO_WARNINGS
-  REM Removed warnings:
+  REM Removed warnings (because the thing being warned about has been taken into account):
   REM - 4204 is C89 specific, so not relevant.
   REM - 5045 is an informational warning about Spectre mitigation, not relevant
   REM - 4668 is some warning in the Windows ucrt\corecrt.h >.>
-  set WARNING_FLAGS=/Wall /wd4204 /wd5045 /wd4668
+  REM - 4710 is about not inlining a function marked inline, and it seems snprintf will always trigger this
+  REM - 4774 is about not using a string literal as the formatting string in snprintf. I think it's safe to use a const char*?
+  set WARNING_FLAGS=/Wall /wd4204 /wd5045 /wd4668 /wd4710 /wd4774
   set SUBSYSTEM_FLAGS=
   set LINK_FLAGS=/link kernel32.lib user32.lib shell32.lib winmm.lib gdi32.lib opengl32.lib
   set OUTPUT_DIR=builds-debug\windows-msvc

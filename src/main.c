@@ -29,6 +29,8 @@
 #include "script.h"
 #include "sdf_utils.h"
 #include "resources.h"
+#include "font_setting.h"
+#include "menu.h"
 
 #define VIRTUAL_SCREEN_HEIGHT 256
 
@@ -38,22 +40,13 @@
 #define HEAD_BOB_MAGNITUDE 0.05f
 #define HEAD_BOB_FREQUENCY 1.3f
 #define COMMENT_LENGTH (DEFAULT_MAX_DISTANCE / COMMENTS_COUNT)
+#define BACKTRACKING_WARNING_DISTANCE 10.0f
 
 #define SECONDS_PER_CHARACTER 0.1f
-
-typedef struct {
-    Font mainFont;
-    Font clearFont;
-    bool clearFontEnabled;
-    Font *currentFont;
-} FontSetting;
 
 bool FileMissing(const char *path);
 void DrawWarningText(const char *text, int fontSize, int y, Color color);
 bool EnsureResourcesExist(void);
-bool ShowMainMenu(FontSetting *fontSetting, float *fov, float *bobIntensity,
-                  int *mouseSpeedX, int *mouseSpeedY);
-void SwitchFont(FontSetting *fontSetting);
 Rectangle GetRenderSrc(int screenWidth, int screenHeight);
 Rectangle GetRenderDest(int screenWidth, int screenHeight);
 Vector3 GetLegalPlayerMovement(Vector3 position, Vector3 movement, float maxDistance);
@@ -79,6 +72,8 @@ int main(void) {
     int lightsStage = 0;
     int narrationStage = -1;
     float narrationTime = 0.0f;
+    float furthestDistanceSoFar = cameraPosition[2];
+    float backtrackingTime = 0.0f;
 
     // Runtime configurable options
     float fieldOfView = 80.0f;
@@ -99,13 +94,19 @@ int main(void) {
     Font vt323Font = LoadFontEx(resourcePaths[RESOURCE_VT323], 72, 0, 0);
     Font openSansFont = LoadFontEx(resourcePaths[RESOURCE_OPEN_SANS], 72, 0, 0);
     FontSetting fontSetting = {
-        vt323Font, openSansFont, false, &vt323Font
+        vt323Font, openSansFont, false, NULL /* This is set immediately after */
     };
+    /* DO NOT REMOVE THE FOLLOWING LINE IT'LL BE A NULL POINTER OTHERWISE */
+    fontSetting.currentFont = &fontSetting.mainFont;
+    /* currentFont is initialized as NULL and then set to point to
+     * mainFont because MSVC complains if you try to set currentFont
+     * to &vt323Font in the initializer */
 
     Shader sdfShader = LoadShader(0, resourcePaths[RESOURCE_SHADER]);
     int resolutionLocation = GetShaderLocation(sdfShader, "resolution");
     int cameraPositionLocation = GetShaderLocation(sdfShader, "cameraPosition");
     int cameraRotationLocation = GetShaderLocation(sdfShader, "cameraRotation");
+    int cameraFieldOfViewLocation = GetShaderLocation(sdfShader, "cameraFieldOfView");
     int lightsStageLocation = GetShaderLocation(sdfShader, "stage");
     int maxDistanceLocation = GetShaderLocation(sdfShader, "maxDistance");
 
@@ -238,7 +239,8 @@ int main(void) {
         Vector3 position = { cameraPosition[0], 0.0f, cameraPosition[2] };
         // ..on the forward axis
         Vector3 forward = GetPathForward(position, maxDistance);
-        forward = Vector3Scale(forward, Vector3DotProduct(forward, movement));
+        float forwardDotMovement = Vector3DotProduct(forward, movement);
+        forward = Vector3Scale(forward, forwardDotMovement);
         position = GetLegalPlayerMovement(position, forward, maxDistance);
         // ..on the right axis
         Vector3 right = GetPathNormal(position, maxDistance);
@@ -286,6 +288,16 @@ int main(void) {
             narrationTime = 0.0f;
         }
 
+        // Backtracking check
+        bool backtracking = false;
+        if (cameraPosition[2] > furthestDistanceSoFar) {
+            furthestDistanceSoFar = cameraPosition[2];
+            backtrackingTime = 0.0f;
+        } else if (furthestDistanceSoFar - cameraPosition[2] > BACKTRACKING_WARNING_DISTANCE) {
+            backtracking = true;
+            backtrackingTime += delta;
+        }
+
         BeginDrawing();
         ClearBackground(BLACK);
 
@@ -294,6 +306,8 @@ int main(void) {
                        cameraPosition, UNIFORM_VEC3);
         SetShaderValue(sdfShader, cameraRotationLocation,
                        cameraRotation, UNIFORM_VEC3);
+        SetShaderValue(sdfShader, cameraFieldOfViewLocation,
+                       &fieldOfView, UNIFORM_FLOAT);
         SetShaderValue(sdfShader, lightsStageLocation,
                        &lightsStage, UNIFORM_INT);
 
@@ -314,13 +328,13 @@ int main(void) {
                        (Vector2){ 0.0f, 0.0f }, 0.0f, WHITE);
 
         // Narration text display
+        float fontSize = screenHeight / 240.0f * 12.0f;
         if (narrationStage >= 0 && narrationStage < COMMENTS_COUNT) {
             narrationTime += delta;
             int linesPerScreen = 2;
             int lineIndex = GetLine(narrationTime, narrationStage,
                                     linesPerScreen);
             if (lineIndex != -1) {
-                float fontSize = screenHeight / 240.0f * 12.0f;
                 float y = screenHeight * 0.9f - fontSize;
                 for (int i = 0; i < linesPerScreen; i++) {
                     int index = lineIndex + i;
@@ -333,6 +347,11 @@ int main(void) {
                     }
                 }
             }
+        }
+
+        // Warning for the player that they're going backwards
+        if (backtracking && forwardDotMovement < 0.0) {
+            DisplaySubtitle(*fontSetting.currentFont, "Warning: You're going the wrong way.", fontSize, 50.0f);
         }
 
         if (IsKeyDown(KEY_F3)) {
@@ -405,41 +424,6 @@ bool EnsureResourcesExist(void) {
         }
     }
     return true;
-}
-
-bool ShowMainMenu(FontSetting *fontSetting, float *fov, float *bobIntensity,
-                  int *mouseSpeedX, int *mouseSpeedY) {
-    while (true) {
-        if (WindowShouldClose()) {
-            return true;
-        }
-
-        if (IsKeyPressed(KEY_P)) {
-            break;
-        }
-
-        BeginDrawing();
-        ClearBackground((Color){ 0x33, 0x33, 0x33, 0xFF });
-        Color textColor = (Color){ 0xEE, 0xEE, 0xEE, 0xFF };
-        DrawTextEx(*fontSetting->currentFont, "Main Menu",
-                   (Vector2) { 64.0f, 100.0f }, 36, 0.0f, textColor);
-        DrawTextEx(*fontSetting->currentFont, "Press P to play",
-                   (Vector2) { 64.0f, 150.0f }, 36, 0.0f, textColor);
-        DrawTextEx(*fontSetting->currentFont, "TODO: Make this an actual menu",
-                   (Vector2) { 64.0f, 200.0f }, 36, 0.0f, textColor);
-        EndDrawing();
-    }
-    return false;
-}
-
-void SwitchFont(FontSetting *fontSetting) {
-    if (fontSetting->clearFontEnabled) {
-        fontSetting->clearFontEnabled = false;
-        fontSetting->currentFont = &fontSetting->mainFont;
-    } else {
-        fontSetting->clearFontEnabled = true;
-        fontSetting->currentFont = &fontSetting->clearFont;
-    }
 }
 
 Rectangle GetRenderSrc(int screenWidth, int screenHeight) {

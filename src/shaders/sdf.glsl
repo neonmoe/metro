@@ -45,6 +45,7 @@ varying vec4 position;
 uniform vec2 resolution;
 uniform vec3 cameraPosition;
 uniform vec3 cameraRotation;
+uniform float cameraFieldOfView;
 
 uniform int stage = 0;
 uniform float maxDistance = 100.0;
