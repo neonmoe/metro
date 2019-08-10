@@ -134,7 +134,8 @@ IF DEFINED BUILD_DEBUG (
   REM - 4668 is some warning in the Windows ucrt\corecrt.h >.>
   REM - 4710 is about not inlining a function marked inline, and it seems snprintf will always trigger this
   REM - 4774 is about not using a string literal as the formatting string in snprintf. I think it's safe to use a const char*?
-  set WARNING_FLAGS=/Wall /wd4204 /wd5045 /wd4668 /wd4710 /wd4774
+  REM - 4127 "conditional expression is constant" yeah, thanks, I know.
+  set WARNING_FLAGS=/Wall /wd4204 /wd5045 /wd4668 /wd4710 /wd4774 /wd4127
   set SUBSYSTEM_FLAGS=
   set LINK_FLAGS=/link kernel32.lib user32.lib shell32.lib winmm.lib gdi32.lib opengl32.lib
   set OUTPUT_DIR=builds-debug\windows-msvc

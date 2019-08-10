@@ -33,6 +33,8 @@
 #include "menu.h"
 
 #define VIRTUAL_SCREEN_HEIGHT 256
+#define DEFAULT_SCREEN_WIDTH 800
+#define DEFAULT_SCREEN_HEIGHT 500
 
 #define DEFAULT_MAX_DISTANCE 2140.0f
 #define WALK_SPEED 1.4f
@@ -43,6 +45,10 @@
 #define BACKTRACKING_WARNING_DISTANCE 10.0f
 
 #define SECONDS_PER_CHARACTER 0.1f
+
+// Defines to make recording promotional material easier
+#define NARRATION_ENABLED true
+#define BACKTRACKING_WARNING_ENABLED true
 
 bool FileMissing(const char *path);
 void DrawWarningText(const char *text, int fontSize, int y, Color color);
@@ -84,7 +90,8 @@ int main(void) {
     SetTraceLogLevel(LOG_WARNING);
     SetConfigFlags(FLAG_VSYNC_HINT | FLAG_WINDOW_RESIZABLE);
     SetExitKey(KEY_F4);
-    InitWindow(640, 480, "HEL Underground");
+    InitWindow(DEFAULT_SCREEN_WIDTH, DEFAULT_SCREEN_HEIGHT,
+               "A Walk In A Metro Tunnel");
     InitAudioDevice();
 
     if (!EnsureResourcesExist()) {
@@ -329,7 +336,8 @@ int main(void) {
 
         // Narration text display
         float fontSize = screenHeight / 240.0f * 12.0f;
-        if (narrationStage >= 0 && narrationStage < COMMENTS_COUNT) {
+        if (NARRATION_ENABLED &&
+            narrationStage >= 0 && narrationStage < COMMENTS_COUNT) {
             narrationTime += delta;
             int linesPerScreen = 2;
             int lineIndex = GetLine(narrationTime, narrationStage,
@@ -350,8 +358,11 @@ int main(void) {
         }
 
         // Warning for the player that they're going backwards
-        if (backtracking && forwardDotMovement < 0.0) {
-            DisplaySubtitle(*fontSetting.currentFont, "Warning: You're going the wrong way.", fontSize, 50.0f);
+        if (BACKTRACKING_WARNING_ENABLED &&
+            backtracking && forwardDotMovement < 0.0) {
+            DisplaySubtitle(*fontSetting.currentFont,
+                            "Warning: You're going the wrong way.",
+                            fontSize, 50.0f);
         }
 
         if (IsKeyDown(KEY_F3)) {
