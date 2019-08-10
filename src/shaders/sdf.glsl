@@ -258,8 +258,9 @@ float get_ambient_occlusion(vec3 samplePos, vec3 normal) {
 }
 
 vec4 get_color(vec2 screenPosition, vec3 position, vec3 rotation) {
-    // TODO: Configurable FoV
-    float nearDistance = 0.5; // This is 90 degrees FoV
+    // Not sure if this is correct but it seems right /shrug
+    float r = (180.0 - cameraFieldOfView) / 720.0 * 3.14159;
+    float nearDistance = sin(r) / cos(r);
     vec3 direction = vec3(screenPosition.x, screenPosition.y, nearDistance);
     direction = normalize(direction);
     direction = rotate_x(vec4(direction, 1.0), radians(rotation.x)).xyz;
