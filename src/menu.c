@@ -216,7 +216,7 @@ bool ShowMainMenu(FontSetting *fontSetting, Texture2D gameRenderTexture,
         float fontOffset = fontSetting->clearFontEnabled ? 30.0f : 0.0f;
         Color buttonColor = (Color){ 0x44, 0x44, 0x44, 0xFF };
         Color buttonHighlightColor = (Color){ 0x55, 0x55, 0x55, 0xFF };
-        Color checkedColor = (Color){ 0x66, 0x66, 0x66, 0xFF };
+        Color checkedColor = (Color){ 0x88, 0x88, 0x88, 0xFF };
         Color redButtonColor = (Color){ 0x55, 0x44, 0x44, 0xFF };
         Color redButtonHighlightColor = (Color){ 0x66, 0x44, 0x44, 0xFF };
 

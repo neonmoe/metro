@@ -126,10 +126,8 @@ int main(void) {
     SetShaderValue(sdfShader, maxDistanceLocation, &maxDistance, UNIFORM_FLOAT);
 
     bool windowClosedInMenu = ShowEpilepsyWarning(&fontSetting);
-    windowClosedInMenu |=
-        ShowMainMenu(&fontSetting, targetTex.texture,
-                     false, &fieldOfView, &bobbingIntensity,
-                     &mouseSpeedX, &mouseSpeedY);
+    bool firstMainMenuShown = false;
+    bool firstGameRenderDone = false;
 
     float lastTime = (float)GetTime();
     while (!WindowShouldClose() && !windowClosedInMenu) {
@@ -149,15 +147,16 @@ int main(void) {
         }
 
         // Menu access
-        if (IsKeyPressed(KEY_ESCAPE)) {
+        if (IsKeyPressed(KEY_ESCAPE) || (!firstMainMenuShown && firstGameRenderDone)) {
             mouseLookEnabled = false;
             EnableCursor();
             // TODO: Pass the latest frame to the main menu so it can be shown
             // in the background, perhaps less saturated and darkened?
             windowClosedInMenu |=
                 ShowMainMenu(&fontSetting, targetTex.texture,
-                             true, &fieldOfView, &bobbingIntensity,
+                             firstMainMenuShown, &fieldOfView, &bobbingIntensity,
                              &mouseSpeedX, &mouseSpeedY);
+            firstMainMenuShown = true;
         }
 
         // Turn around
@@ -308,7 +307,7 @@ int main(void) {
         }
 
         BeginDrawing();
-        ClearBackground(BLACK);
+        ClearBackground((Color){ 0x20, 0x24, 0x30, 0xFF });
 
         // Upload uniforms
         SetShaderValue(sdfShader, cameraPositionLocation,
@@ -329,7 +328,24 @@ int main(void) {
         EndTextureMode();
 
         // Draw the render texture to the screen
-        DrawGameView(targetTex.texture);
+        if (!firstGameRenderDone) {
+            // Sorry about this hack, the idea is as following:
+
+            // 1. Show warning about noise and flashing graphics
+            // 2. Render 1 frame of the game    <- you're here
+            // 3. Render main menu, with the frame rendered in step 2 in the bg
+            // 4. Continue as normal
+
+            // As you might be able to guess, this branch exists to
+            // make step 2 not cause a flicker. Yes, this should be
+            // done in a more elegant way, but honestly, this is like,
+            // one of the last things I'm going to write in this
+            // codebase. You'll live.
+
+            firstGameRenderDone = true;
+        } else {
+            DrawGameView(targetTex.texture);
+        }
 
         // Narration text display
         int screenHeight = GetScreenHeight();
@@ -448,8 +464,8 @@ bool ShowEpilepsyWarning(FontSetting *fontSetting) {
         time = (float)GetTime();
 
         BeginDrawing();
-        ClearBackground((Color){ 0x44, 0x11, 0x11, 0xFF });
-        Color textColor = (Color){ 0xEE, 0xEE, 0x88, 0xFF };
+        ClearBackground((Color){ 0x20, 0x24, 0x30, 0xFF });
+        Color textColor = (Color){ 0xEE, 0xEE, 0xEE, 0xFF };
         float x = (GetScreenWidth() - 640.0f) / 2.0f + 180.0f;
         float y = (GetScreenHeight() - 480.0f) / 2.0f + 400.0f;
 
@@ -466,18 +482,18 @@ bool ShowEpilepsyWarning(FontSetting *fontSetting) {
         y -= 300.0f;
         DrawTextEx(fontSetting->clearFont, "Warning:",
                    (Vector2){ x, y }, 72, 0.0f, textColor);
+        x -= 196.0f;
         y += 100.0f;
-        x -= 185.0f;
         DrawTextEx(fontSetting->clearFont,
                    "The following experience contains noisy and flashing",
                    (Vector2){ x, y }, 36, 0.0f, textColor);
+        x -= 1.0f;
         y += 40.0f;
-        x -= 3.0f;
         DrawTextEx(fontSetting->clearFont,
                    "graphics. If this sounds uncomfortable to you, please",
                    (Vector2){ x, y }, 36, 0.0f, textColor);
+        x -= 25.0f;
         y += 40.0f;
-        x -= 19.0f;
         DrawTextEx(fontSetting->clearFont,
                    "exit the experience by closing the window or pressing F4.",
                    (Vector2){ x, y }, 36, 0.0f, textColor);
