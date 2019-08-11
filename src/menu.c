@@ -6,8 +6,39 @@
 static Color textColor = { 0xEE, 0xEE, 0xEE, 0xFF };
 
 static
+bool IsNextSelected() {
+    bool shifted = IsKeyDown(KEY_LEFT_SHIFT) ||
+        IsKeyDown(KEY_RIGHT_SHIFT);
+    return IsKeyPressed(KEY_DOWN) || IsKeyPressed(KEY_S) ||
+        (IsKeyPressed(KEY_TAB) && !shifted);
+}
+
+static
+bool IsPreviousSelected() {
+    bool shifted = IsKeyDown(KEY_LEFT_SHIFT) ||
+        IsKeyDown(KEY_RIGHT_SHIFT);
+    return IsKeyPressed(KEY_UP) || IsKeyPressed(KEY_W) ||
+        (IsKeyPressed(KEY_TAB) && shifted);
+}
+
+static
+bool IsSelectionActivated() {
+    return IsKeyPressed(KEY_ENTER) || IsKeyPressed(KEY_SPACE);
+}
+
+static
+void DrawSelection(Rectangle button) {
+    Rectangle selectRect = {
+        button.x - 4.0f, button.y - 4.0f,
+        button.width + 8.0f, button.height + 9.0f
+    };
+    DrawRectangleLinesEx(selectRect, 2, (Color){0x88, 0x88, 0x88, 0xFF});
+}
+
+static
 bool Button(FontSetting *fontSetting, const char* text, Rectangle button,
-            Vector2 textPosition, Color color, Color highlightedColor) {
+            Vector2 textPosition, Color color, Color highlightedColor,
+            bool selected) {
     Vector2 mousePosition = GetMousePosition();
     bool clicked = false;
     if (CheckCollisionPointRec(mousePosition, button)) {
@@ -18,6 +49,12 @@ bool Button(FontSetting *fontSetting, const char* text, Rectangle button,
     } else {
         DrawRectangleRec(button, color);
     }
+    if (selected) {
+        DrawSelection(button);
+        if (IsSelectionActivated()) {
+            clicked = true;
+        }
+    }
     DrawTextEx(*fontSetting->currentFont, text,
                textPosition, 36, 0.0f, textColor);
     return clicked;
@@ -27,10 +64,12 @@ static const char *pressedSlider = 0;
 static float mousePositionRelativeToHandle = 0.0f;
 
 static
-void Slider(FontSetting *fontSetting, const char* text,
-            const char* formattingString, float *value, float min, float max,
-            float step, Vector2 sliderStart, float width,
-            Vector2 textPosition, Color color, Color highlightedColor) {
+void Slider(FontSetting *fontSetting, double deltaTime,
+            const char* text, const char* formattingString,
+            float *value, float min, float max, float step,
+            Vector2 sliderStart, float width,
+            Vector2 textPosition, Color color, Color highlightedColor,
+            bool selected) {
     Vector2 mousePosition = GetMousePosition();
     bool justPressed = false;
 
@@ -57,6 +96,10 @@ void Slider(FontSetting *fontSetting, const char* text,
         DrawRectangleRec(button, color);
     }
 
+    if (selected) {
+        DrawSelection(button);
+    }
+
     // Draw text
     DrawTextEx(*fontSetting->currentFont, text,
                textPosition, 36, 0.0f, textColor);
@@ -81,6 +124,39 @@ void Slider(FontSetting *fontSetting, const char* text,
         pressedSlider = text;
         mousePositionRelativeToHandle = mousePosition.x - button.x - button.width / 2.0f;
     }
+
+    if (selected) {
+        float delta = 0.0f;
+        // FIXME: smooth, delta based sliding
+        if (IsKeyPressed(KEY_LEFT)) {
+            delta -= step;
+        }
+        if (IsKeyPressed(KEY_RIGHT)) {
+            delta += step;
+        }
+        *value = Clamp(*value + delta, min, max);
+    }
+}
+
+static
+int GetNewSelectionIndex(int selectionIndex, bool optionsOpened) {
+    if (selectionIndex == -1) {
+        return IsNextSelected() ? 0 : -1;
+    }
+    int indexCount = optionsOpened ? 8 : 3; // fixme
+    if (IsNextSelected()) {
+        selectionIndex++;
+        if (selectionIndex >= indexCount) {
+            selectionIndex -= indexCount;
+        }
+    }
+    if (IsPreviousSelected()) {
+        selectionIndex--;
+        if (selectionIndex < 0) {
+            selectionIndex += indexCount;
+        }
+    }
+    return selectionIndex;
 }
 
 static bool optionsOpened = false;
@@ -88,6 +164,8 @@ static bool optionsOpened = false;
 bool ShowMainMenu(FontSetting *fontSetting, float *fov, float *bobIntensity,
                   int *mouseSpeedX, int *mouseSpeedY) {
     bool continueGame = false;
+    int selectionIndex = -1;
+    double lastTime = GetTime();
 
     while (!continueGame) {
         if (WindowShouldClose()) {
@@ -97,6 +175,9 @@ bool ShowMainMenu(FontSetting *fontSetting, float *fov, float *bobIntensity,
             continueGame = true;
         }
 
+        double time = GetTime();
+        double delta = time - lastTime;
+        lastTime = time;
         int screenSizeOffsetX = (GetScreenWidth() - 640) / 2;
         int screenSizeOffsetY = (GetScreenHeight() - 480) / 2;
         float fontOffset = fontSetting->clearFontEnabled ? 30.0f : 0.0f;
@@ -105,6 +186,8 @@ bool ShowMainMenu(FontSetting *fontSetting, float *fov, float *bobIntensity,
         Color checkedColor = (Color){ 0x66, 0x66, 0x66, 0xFF };
         Color redButtonColor = (Color){ 0x55, 0x44, 0x44, 0xFF };
         Color redButtonHighlightColor = (Color){ 0x66, 0x44, 0x44, 0xFF };
+
+        selectionIndex = GetNewSelectionIndex(selectionIndex, optionsOpened);
 
         BeginDrawing();
         ClearBackground((Color){ 0x33, 0x33, 0x33, 0xFF });
@@ -122,7 +205,8 @@ bool ShowMainMenu(FontSetting *fontSetting, float *fov, float *bobIntensity,
         Vector2 startTextPosition = { controlX + 20.0f, controlY + 5.0f };
         if (Button(fontSetting, "Start walking",
                    startButton, startTextPosition,
-                   buttonColor, buttonHighlightColor)) {
+                   buttonColor, buttonHighlightColor,
+                   selectionIndex == 0)) {
             continueGame = true;
         }
 
@@ -135,7 +219,8 @@ bool ShowMainMenu(FontSetting *fontSetting, float *fov, float *bobIntensity,
                    (Rectangle){ controlX, controlY,
                            285.0f - fontOffset, 50.0f },
                    (Vector2){ controlX + 20.0f, controlY + 5.0f },
-                   redButtonColor, redButtonHighlightColor)) {
+                   redButtonColor, redButtonHighlightColor,
+                   selectionIndex == (optionsOpened ? 1 : 2))) {
             return true;
         }
         if (optionsOpened) {
@@ -153,8 +238,10 @@ bool ShowMainMenu(FontSetting *fontSetting, float *fov, float *bobIntensity,
             if (Button(fontSetting, "<",
                        (Rectangle){ controlX, controlY, 40.0f, 40.0f },
                        (Vector2){ controlX + 12.0f, controlY + 3.0f },
-                       buttonColor, buttonHighlightColor)) {
+                       buttonColor, buttonHighlightColor,
+                       selectionIndex == 2)) {
                 optionsOpened = false;
+                selectionIndex = 1;
             }
             controlX += 70.0f;
             controlY += 2.0f;
@@ -164,7 +251,8 @@ bool ShowMainMenu(FontSetting *fontSetting, float *fov, float *bobIntensity,
                        (Rectangle){ controlX + fontToggleOffsetX, controlY,
                                40.0f, 40.0f },
                        (Vector2){ controlX, controlY },
-                       buttonColor, buttonHighlightColor)) {
+                       buttonColor, buttonHighlightColor,
+                       selectionIndex == 3)) {
                 SwitchFont(fontSetting);
             }
             if (!fontSetting->clearFontEnabled) {
@@ -173,45 +261,51 @@ bool ShowMainMenu(FontSetting *fontSetting, float *fov, float *bobIntensity,
             }
 
             controlY += 50.0f;
-            Slider(fontSetting, "Field of view: ", "%3.0f",
+            Slider(fontSetting, delta, "Field of view: ", "%3.0f",
                    fov, 60.0f, 120.0f, 1.0f,
                    (Vector2){ controlX + 295.0f, controlY + 19.0f }, 220.0f,
                    (Vector2){ controlX, controlY },
-                   buttonColor, buttonHighlightColor);
+                   buttonColor, buttonHighlightColor,
+                   selectionIndex == 4);
 
             controlY += 50.0f;
             float bobValue = *bobIntensity * 100.0f;
-            Slider(fontSetting, "Bob intensity: ", "%3.0f%%",
+            Slider(fontSetting, delta, "Bob intensity: ", "%3.0f%%",
                    &bobValue, 0.0f, 100.0f, 1.0f,
                    (Vector2){ controlX + 295.0f, controlY + 19.0f }, 220.0f,
                    (Vector2){ controlX, controlY },
-                   buttonColor, buttonHighlightColor);
+                   buttonColor, buttonHighlightColor,
+                   selectionIndex == 5);
             *bobIntensity = bobValue / 100.0f;
 
             controlY += 50.0f;
             float mouseXVal = (float)*mouseSpeedX / 100.0f;
-            Slider(fontSetting, "Mouse speed X: ", "%1.1f",
+            Slider(fontSetting, delta, "Mouse speed X: ", "%1.1f",
                    &mouseXVal, -4.0f, 4.0f, 0.1f,
                    (Vector2){ controlX + 295.0f, controlY + 19.0f }, 220.0f,
                    (Vector2){ controlX, controlY },
-                   buttonColor, buttonHighlightColor);
+                   buttonColor, buttonHighlightColor,
+                   selectionIndex == 6);
             *mouseSpeedX = (int)(mouseXVal * 100.0f);
 
             controlY += 50.0f;
             float mouseYVal = (float)*mouseSpeedY / 100.0f;
-            Slider(fontSetting, "Mouse speed Y: ", "%1.1f",
+            Slider(fontSetting, delta, "Mouse speed Y: ", "%1.1f",
                    &mouseYVal, -4.0f, 4.0f, 0.1f,
                    (Vector2){ controlX + 295.0f, controlY + 19.0f }, 220.0f,
                    (Vector2){ controlX, controlY },
-                   buttonColor, buttonHighlightColor);
+                   buttonColor, buttonHighlightColor,
+                   selectionIndex == 7);
             *mouseSpeedY = (int)(mouseYVal * 100.0f);
         } else {
             if (Button(fontSetting, "Options",
                        (Rectangle){ controlX, controlY,
                                165.0f - fontOffset, 50.0f },
                        (Vector2){ controlX + 20.0f, controlY + 5.0f },
-                       buttonColor, buttonHighlightColor)) {
+                       buttonColor, buttonHighlightColor,
+                       selectionIndex == 1)) {
                 optionsOpened = true;
+                selectionIndex = 2;
             }
         }
 
