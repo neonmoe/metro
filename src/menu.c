@@ -174,7 +174,7 @@ int GetNewSelectionIndex(int selectionIndex, bool optionsOpened) {
     if (selectionIndex == -1) {
         return IsNextSelected() || IsPreviousSelected() ? 0 : -1;
     }
-    int indexCount = optionsOpened ? 8 : 3; // fixme
+    int indexCount = optionsOpened ? 8 : 3;
     if (IsNextSelected()) {
         selectionIndex++;
         if (selectionIndex >= indexCount) {
@@ -231,9 +231,14 @@ bool ShowMainMenu(FontSetting *fontSetting, Texture2D gameRenderTexture,
         // Draw game
         DrawGameView(gameRenderTexture);
         // Draw filter to fade it out a bit
-        float filterAnimTime = gameStarted ? 0.2f : 0.001f;
-        char filterAlpha =
-            (char)(Clamp((time - startTime) / filterAnimTime, 0, 1) * 0xBB);
+        char filterAlpha;
+        if (gameStarted) {
+            float filterAnimTime = 0.2f;
+            filterAlpha = (char)(Clamp((time - startTime) / filterAnimTime,
+                                       0, 1) * 0xBB);
+        } else {
+            filterAlpha = 0xBB;
+        }
         DrawRectangle(0, 0, GetScreenWidth(), GetScreenHeight(),
                       (Color){0x20, 0x24, 0x30, filterAlpha});
 

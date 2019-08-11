@@ -150,8 +150,6 @@ int main(void) {
         if (IsKeyPressed(KEY_ESCAPE) || (!firstMainMenuShown && firstGameRenderDone)) {
             mouseLookEnabled = false;
             EnableCursor();
-            // TODO: Pass the latest frame to the main menu so it can be shown
-            // in the background, perhaps less saturated and darkened?
             windowClosedInMenu |=
                 ShowMainMenu(&fontSetting, targetTex.texture,
                              firstMainMenuShown, &fieldOfView, &bobbingIntensity,
