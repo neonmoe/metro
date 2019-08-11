@@ -93,7 +93,6 @@ int main(void) {
     SetExitKey(KEY_F4);
     InitWindow(DEFAULT_SCREEN_WIDTH, DEFAULT_SCREEN_HEIGHT,
                "A Walk In A Metro Tunnel");
-    InitAudioDevice();
 
     if (EnsureResourcesExist()) {
         return 0;
@@ -380,7 +379,6 @@ int main(void) {
     UnloadFont(openSansFont);
     UnloadFont(vt323Font);
 
-    CloseAudioDevice();
     CloseWindow();
     return 0;
 }

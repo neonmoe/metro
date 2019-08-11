@@ -157,7 +157,23 @@ SDFSample sdfLightMeshes(vec3 samplePos) {
     }
 }
 
-#define OBJECTS_COUNT 4
+SDFSample sdfFence(vec3 samplePos) {
+    float z = maxDistance - 20.0f;
+    float signDistance = sdfBox(samplePos, vec3(0.0, 1.5, z),
+                            vec3(1.9, 0.4, 0.2));
+    float poleDistance = sdfBox(samplePos, vec3(-1.5, 0.75, z),
+                                vec3(0.14, 1.5, 0.15));
+    poleDistance = min(poleDistance,
+                       sdfBox(samplePos, vec3(1.52, 0.7, z + 0.05),
+                              vec3(0.14, 1.5, 0.15)));
+    if (signDistance < poleDistance) {
+        return SDFSample(signDistance, COLOR_WOOD);
+    } else {
+        return SDFSample(poleDistance, COLOR_RAIL);
+    }
+}
+
+#define OBJECTS_COUNT 5
 SDFSample sdf(vec3 samplePos, bool ignoreLightMeshes) {
     if (samplePos.z > 0) {
         samplePos = transformFromMetroSpace(samplePos);
@@ -167,14 +183,15 @@ SDFSample sdf(vec3 samplePos, bool ignoreLightMeshes) {
     // - the tunnel
     // - the lights
     // - the rails
+    // - fence at the end
     // - and the planks below the rails
     // Scene additions TODO:
     // - rocks/gravel
-    // - fence at the end
     SDFSample samples[OBJECTS_COUNT] = SDFSample[OBJECTS_COUNT]
         (ignoreLightMeshes ? SDFSample(10000.0, vec3(0.0, 0.0, 0.0)) : sdfLightMeshes(samplePos),
          sdfTunnel(samplePos),
          sdfRails(samplePos),
+         sdfFence(samplePos),
          sdfRailPlanks(samplePos));
 
     float lowestDistance = samples[0].distance;
