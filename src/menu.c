@@ -1,9 +1,29 @@
+/* This is a game where the player walks through a metro tunnel.
+ * Copyright (C) 2019  Jens Pitkanen <jens@neon.moe>
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
+
+#include <stdio.h>
+
 #include "menu.h"
 #include "font_setting.h"
 #include "raymath.h"
-#include <stdio.h>
+#include "render_utils.h"
 
 static Color textColor = { 0xEE, 0xEE, 0xEE, 0xFF };
+static Color sliderColor = { 0x55, 0x50, 0x40, 0xFF };
 
 static
 bool IsNextSelected(void) {
@@ -27,12 +47,12 @@ bool IsSelectionActivated(void) {
 }
 
 static
-void DrawSelection(Rectangle button) {
+void DrawOutline(Rectangle button, int offset, int thickness, Color color) {
     Rectangle selectRect = {
-        button.x - 4.0f, button.y - 4.0f,
-        button.width + 8.0f, button.height + 9.0f
+        button.x - offset, button.y - offset,
+        button.width + offset * 2, button.height + offset * 2
     };
-    DrawRectangleLinesEx(selectRect, 2, (Color){0x88, 0x88, 0x88, 0xFF});
+    DrawRectangleLinesEx(selectRect, thickness, color);
 }
 
 static
@@ -49,8 +69,10 @@ bool Button(FontSetting *fontSetting, const char* text, Rectangle button,
     } else {
         DrawRectangleRec(button, color);
     }
+    DrawOutline(button, 2, 2, (Color){0, 0, 0, 0x77});
+
     if (selected) {
-        DrawSelection(button);
+        DrawOutline(button, 4, 2, (Color){0x88, 0x88, 0x88, 0xFF});
         if (IsSelectionActivated()) {
             clicked = true;
         }
@@ -74,10 +96,6 @@ void Slider(FontSetting *fontSetting, float deltaTime,
     bool justPressed = false;
 
     // Draw slider line
-    Color sliderColor = color;
-    sliderColor.r -= 0x22;
-    sliderColor.g -= 0x22;
-    sliderColor.b -= 0x22;
     Rectangle slider = {
         sliderStart.x, sliderStart.y, width, 2.0f
     };
@@ -95,9 +113,10 @@ void Slider(FontSetting *fontSetting, float deltaTime,
     } else {
         DrawRectangleRec(button, color);
     }
+    DrawOutline(button, 2, 2, (Color){0, 0, 0, 0x77});
 
     if (selected) {
-        DrawSelection(button);
+        DrawOutline(button, 4, 2, (Color){0x88, 0x88, 0x88, 0xFF});
     }
 
     // Draw text
@@ -173,11 +192,13 @@ int GetNewSelectionIndex(int selectionIndex, bool optionsOpened) {
 
 static bool optionsOpened = false;
 
-bool ShowMainMenu(FontSetting *fontSetting, float *fov, float *bobIntensity,
+bool ShowMainMenu(FontSetting *fontSetting, Texture2D gameRenderTexture,
+                  bool gameStarted, float *fov, float *bobIntensity,
                   int *mouseSpeedX, int *mouseSpeedY) {
     bool continueGame = false;
     int selectionIndex = -1;
     float lastTime = (float)GetTime();
+    float startTime = (float)GetTime();
 
     while (!continueGame) {
         if (WindowShouldClose()) {
@@ -207,6 +228,15 @@ bool ShowMainMenu(FontSetting *fontSetting, float *fov, float *bobIntensity,
         float controlX = 50.0f + screenSizeOffsetX;
         float controlY = 40.0f + screenSizeOffsetY;
 
+        // Draw game
+        DrawGameView(gameRenderTexture);
+        // Draw filter to fade it out a bit
+        float filterAnimTime = gameStarted ? 0.2f : 0.001f;
+        char filterAlpha =
+            (char)(Clamp((time - startTime) / filterAnimTime, 0, 1) * 0xBB);
+        DrawRectangle(0, 0, GetScreenWidth(), GetScreenHeight(),
+                      (Color){0x20, 0x24, 0x30, filterAlpha});
+
         DrawTextEx(*fontSetting->currentFont, "A Walk In A Metro Tunnel",
                    (Vector2) { controlX, controlY }, 48, 0.0f, textColor);
 
@@ -215,7 +245,7 @@ bool ShowMainMenu(FontSetting *fontSetting, float *fov, float *bobIntensity,
         Rectangle startButton = { controlX, controlY,
                                   240.0f - fontOffset, 50.0f };
         Vector2 startTextPosition = { controlX + 20.0f, controlY + 5.0f };
-        if (Button(fontSetting, "Start walking",
+        if (Button(fontSetting, gameStarted ? "Continue" : "Start walking",
                    startButton, startTextPosition,
                    buttonColor, buttonHighlightColor,
                    selectionIndex == 0)) {

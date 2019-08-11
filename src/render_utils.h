@@ -15,18 +15,13 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#ifndef FONT_SETTING_H
-#define FONT_SETTING_H
+#ifndef RENDER_UTILS_H
+#define RENDER_UTILS_H
+
+#define VIRTUAL_SCREEN_HEIGHT 256
 
 #include "raylib.h"
 
-typedef struct {
-    Font mainFont;
-    Font clearFont;
-    bool clearFontEnabled;
-    Font *currentFont;
-} FontSetting;
-
-void SwitchFont(FontSetting *fontSetting);
+void DrawGameView(Texture2D texture);
 
 #endif

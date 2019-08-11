@@ -31,8 +31,8 @@
 #include "resources.h"
 #include "font_setting.h"
 #include "menu.h"
+#include "render_utils.h"
 
-#define VIRTUAL_SCREEN_HEIGHT 256
 #define DEFAULT_SCREEN_WIDTH 800
 #define DEFAULT_SCREEN_HEIGHT 500
 
@@ -127,7 +127,8 @@ int main(void) {
 
     bool windowClosedInMenu = ShowEpilepsyWarning(&fontSetting);
     windowClosedInMenu |=
-        ShowMainMenu(&fontSetting, &fieldOfView, &bobbingIntensity,
+        ShowMainMenu(&fontSetting, targetTex.texture,
+                     false, &fieldOfView, &bobbingIntensity,
                      &mouseSpeedX, &mouseSpeedY);
 
     float lastTime = (float)GetTime();
@@ -154,7 +155,8 @@ int main(void) {
             // TODO: Pass the latest frame to the main menu so it can be shown
             // in the background, perhaps less saturated and darkened?
             windowClosedInMenu |=
-                ShowMainMenu(&fontSetting, &fieldOfView, &bobbingIntensity,
+                ShowMainMenu(&fontSetting, targetTex.texture,
+                             true, &fieldOfView, &bobbingIntensity,
                              &mouseSpeedX, &mouseSpeedY);
         }
 
@@ -284,7 +286,6 @@ int main(void) {
         cameraPosition[1] += headBobAmount;
 
         // Activate location-based actions
-        // TODO: Add a fence or something at the end.
         float lightMaxDistance = maxDistance - 9.0f;
         float triggerPosition = Clamp(NoiseifyPosition(cameraPosition[2]),
                                       0.0f, lightMaxDistance);
@@ -328,14 +329,10 @@ int main(void) {
         EndTextureMode();
 
         // Draw the render texture to the screen
-        int screenWidth = GetScreenWidth();
-        int screenHeight = GetScreenHeight();
-        DrawTexturePro(targetTex.texture,
-                       GetRenderSrc(screenWidth, screenHeight),
-                       GetRenderDest(screenWidth, screenHeight),
-                       (Vector2){ 0.0f, 0.0f }, 0.0f, WHITE);
+        DrawGameView(targetTex.texture);
 
         // Narration text display
+        int screenHeight = GetScreenHeight();
         float fontSize = screenHeight / 240.0f * 12.0f;
         if (NARRATION_ENABLED &&
             narrationStage >= 0 && narrationStage < COMMENTS_COUNT) {
@@ -487,36 +484,6 @@ bool ShowEpilepsyWarning(FontSetting *fontSetting) {
         EndDrawing();
     }
     return false;
-}
-
-Rectangle GetRenderSrc(int screenWidth, int screenHeight) {
-    float ratio = (float)screenWidth / (float)screenHeight;
-    float margin, width, height;
-    if (ratio < 2.0) {
-        margin = (VIRTUAL_SCREEN_HEIGHT * (2.0f - ratio)) / 2.0f;
-        width = VIRTUAL_SCREEN_HEIGHT * ratio;
-        height = (float)VIRTUAL_SCREEN_HEIGHT;
-    } else {
-        margin = 0.0f;
-        width = VIRTUAL_SCREEN_HEIGHT * 2.0f;
-        height = (float)VIRTUAL_SCREEN_HEIGHT;
-    }
-    return (Rectangle){margin, 0.0f, width, height};
-}
-
-Rectangle GetRenderDest(int screenWidth, int screenHeight) {
-    float ratio = (float)screenWidth / (float)screenHeight;
-    float margin, width, height;
-    if (ratio < 2.0) {
-        margin = 0.0f;
-        width = (float)screenWidth;
-        height = (float)screenHeight;
-    } else {
-        margin = (screenWidth - screenHeight * 2.0f) / 2.0f;
-        width = screenHeight * 2.0f;
-        height = (float)screenHeight;
-    }
-    return (Rectangle){margin, 0.0f, width, height};
 }
 
 Vector3 GetLegalPlayerMovement(Vector3 position, Vector3 movement, float maxDistance) {
