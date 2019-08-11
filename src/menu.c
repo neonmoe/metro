@@ -83,6 +83,8 @@ void Slider(FontSetting *fontSetting, const char* text,
     }
 }
 
+static bool optionsOpened = false;
+
 bool ShowMainMenu(FontSetting *fontSetting, float *fov, float *bobIntensity,
                   int *mouseSpeedX, int *mouseSpeedY) {
     bool continueGame = false;
@@ -124,66 +126,94 @@ bool ShowMainMenu(FontSetting *fontSetting, float *fov, float *bobIntensity,
             continueGame = true;
         }
 
-        controlX += 270.0f;
-        Rectangle closeButton = { controlX - fontOffset, controlY,
-                                  285.0f - fontOffset, 50.0f };
-        Vector2 closeTextPosition = { controlX + 20.0f - fontOffset,
-                                      controlY + 5.0f };
+        if (optionsOpened) {
+            controlX += 270.0f;
+        } else {
+            controlY += 140.0f;
+        }
         if (Button(fontSetting, "Close Application",
-                   closeButton, closeTextPosition,
+                   (Rectangle){ controlX, controlY,
+                           285.0f - fontOffset, 50.0f },
+                   (Vector2){ controlX + 20.0f, controlY + 5.0f },
                    redButtonColor, redButtonHighlightColor)) {
             return true;
         }
+        if (optionsOpened) {
+            controlX -= 270.0f;
+            controlY += 70.0f;
+        } else {
+            controlY -= 70.0f;
+        }
 
-        controlX = 53.0f + screenSizeOffsetX;
-        controlY += 70.0f;
+        if (optionsOpened) {
+            controlX += 13.0f;
 
-        int fontToggleOffsetX = 385;
-        if (Button(fontSetting, "Use fancy font:",
-                   (Rectangle){ controlX + fontToggleOffsetX, controlY,
-                                40.0f, 40.0f },
+            controlX -= 70.0f;
+            controlY -= 2.0f;
+            if (Button(fontSetting, "<",
+                       (Rectangle){ controlX, controlY, 40.0f, 40.0f },
+                       (Vector2){ controlX + 12.0f, controlY + 3.0f },
+                       buttonColor, buttonHighlightColor)) {
+                optionsOpened = false;
+            }
+            controlX += 70.0f;
+            controlY += 2.0f;
+
+            int fontToggleOffsetX = 385;
+            if (Button(fontSetting, "Use fancy font:",
+                       (Rectangle){ controlX + fontToggleOffsetX, controlY,
+                               40.0f, 40.0f },
+                       (Vector2){ controlX, controlY },
+                       buttonColor, buttonHighlightColor)) {
+                SwitchFont(fontSetting);
+            }
+            if (!fontSetting->clearFontEnabled) {
+                DrawRectangle((int)controlX + fontToggleOffsetX + 8,
+                              (int)controlY + 8, 24, 24, checkedColor);
+            }
+
+            controlY += 50.0f;
+            Slider(fontSetting, "Field of view: ", "%3.0f",
+                   fov, 60.0f, 120.0f, 1.0f,
+                   (Vector2){ controlX + 295.0f, controlY + 19.0f }, 220.0f,
                    (Vector2){ controlX, controlY },
-                   buttonColor, buttonHighlightColor)) {
-            SwitchFont(fontSetting);
+                   buttonColor, buttonHighlightColor);
+
+            controlY += 50.0f;
+            float bobValue = *bobIntensity * 100.0f;
+            Slider(fontSetting, "Bob intensity: ", "%3.0f%%",
+                   &bobValue, 0.0f, 100.0f, 1.0f,
+                   (Vector2){ controlX + 295.0f, controlY + 19.0f }, 220.0f,
+                   (Vector2){ controlX, controlY },
+                   buttonColor, buttonHighlightColor);
+            *bobIntensity = bobValue / 100.0f;
+
+            controlY += 50.0f;
+            float mouseXVal = (float)*mouseSpeedX / 100.0f;
+            Slider(fontSetting, "Mouse speed X: ", "%1.1f",
+                   &mouseXVal, -4.0f, 4.0f, 0.1f,
+                   (Vector2){ controlX + 295.0f, controlY + 19.0f }, 220.0f,
+                   (Vector2){ controlX, controlY },
+                   buttonColor, buttonHighlightColor);
+            *mouseSpeedX = (int)(mouseXVal * 100.0f);
+
+            controlY += 50.0f;
+            float mouseYVal = (float)*mouseSpeedY / 100.0f;
+            Slider(fontSetting, "Mouse speed Y: ", "%1.1f",
+                   &mouseYVal, -4.0f, 4.0f, 0.1f,
+                   (Vector2){ controlX + 295.0f, controlY + 19.0f }, 220.0f,
+                   (Vector2){ controlX, controlY },
+                   buttonColor, buttonHighlightColor);
+            *mouseSpeedY = (int)(mouseYVal * 100.0f);
+        } else {
+            if (Button(fontSetting, "Options",
+                       (Rectangle){ controlX, controlY,
+                               165.0f - fontOffset, 50.0f },
+                       (Vector2){ controlX + 20.0f, controlY + 5.0f },
+                       buttonColor, buttonHighlightColor)) {
+                optionsOpened = true;
+            }
         }
-        if (!fontSetting->clearFontEnabled) {
-            DrawRectangle((int)controlX + fontToggleOffsetX + 8,
-                          (int)controlY + 8, 24, 24, checkedColor);
-        }
-
-        controlY += 50.0f;
-        Slider(fontSetting, "Field of view: ", "%3.0f",
-               fov, 60.0f, 120.0f, 1.0f,
-               (Vector2){ controlX + 295.0f, controlY + 19.0f }, 220.0f,
-               (Vector2){ controlX, controlY },
-               buttonColor, buttonHighlightColor);
-
-        controlY += 50.0f;
-        float bobValue = *bobIntensity * 100.0f;
-        Slider(fontSetting, "Bob intensity: ", "%3.0f%%",
-               &bobValue, 0.0f, 100.0f, 1.0f,
-               (Vector2){ controlX + 295.0f, controlY + 19.0f }, 220.0f,
-               (Vector2){ controlX, controlY },
-               buttonColor, buttonHighlightColor);
-        *bobIntensity = bobValue / 100.0f;
-
-        controlY += 50.0f;
-        float mouseXVal = (float)*mouseSpeedX / 100.0f;
-        Slider(fontSetting, "Mouse speed X: ", "%1.1f",
-               &mouseXVal, -4.0f, 4.0f, 0.1f,
-               (Vector2){ controlX + 295.0f, controlY + 19.0f }, 220.0f,
-               (Vector2){ controlX, controlY },
-               buttonColor, buttonHighlightColor);
-        *mouseSpeedX = (int)(mouseXVal * 100.0f);
-
-        controlY += 50.0f;
-        float mouseYVal = (float)*mouseSpeedY / 100.0f;
-        Slider(fontSetting, "Mouse speed Y: ", "%1.1f",
-               &mouseYVal, -4.0f, 4.0f, 0.1f,
-               (Vector2){ controlX + 295.0f, controlY + 19.0f }, 220.0f,
-               (Vector2){ controlX, controlY },
-               buttonColor, buttonHighlightColor);
-        *mouseSpeedY = (int)(mouseYVal * 100.0f);
 
         EndDrawing();
     }
