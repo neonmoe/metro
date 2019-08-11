@@ -6,7 +6,7 @@
 static Color textColor = { 0xEE, 0xEE, 0xEE, 0xFF };
 
 static
-bool IsNextSelected() {
+bool IsNextSelected(void) {
     bool shifted = IsKeyDown(KEY_LEFT_SHIFT) ||
         IsKeyDown(KEY_RIGHT_SHIFT);
     return IsKeyPressed(KEY_DOWN) || IsKeyPressed(KEY_S) ||
@@ -14,7 +14,7 @@ bool IsNextSelected() {
 }
 
 static
-bool IsPreviousSelected() {
+bool IsPreviousSelected(void) {
     bool shifted = IsKeyDown(KEY_LEFT_SHIFT) ||
         IsKeyDown(KEY_RIGHT_SHIFT);
     return IsKeyPressed(KEY_UP) || IsKeyPressed(KEY_W) ||
@@ -22,7 +22,7 @@ bool IsPreviousSelected() {
 }
 
 static
-bool IsSelectionActivated() {
+bool IsSelectionActivated(void) {
     return IsKeyPressed(KEY_ENTER) || IsKeyPressed(KEY_SPACE);
 }
 
@@ -64,7 +64,7 @@ static const char *pressedSlider = 0;
 static float mousePositionRelativeToHandle = 0.0f;
 
 static
-void Slider(FontSetting *fontSetting, double deltaTime,
+void Slider(FontSetting *fontSetting, float deltaTime,
             const char* text, const char* formattingString,
             float *value, float min, float max, float step,
             Vector2 sliderStart, float width,
@@ -127,12 +127,24 @@ void Slider(FontSetting *fontSetting, double deltaTime,
 
     if (selected) {
         float delta = 0.0f;
-        // FIXME: smooth, delta based sliding
-        if (IsKeyPressed(KEY_LEFT)) {
+        // Sorry about using static here, but I just, really can't be
+        // bothered to not do it this way right now.
+        static double leftPressedTime = 0.0;
+        if (IsKeyPressed(KEY_LEFT) || IsKeyPressed(KEY_A)) {
             delta -= step;
+            leftPressedTime = GetTime();
+        } else if ((IsKeyDown(KEY_LEFT) || IsKeyDown(KEY_A)) &&
+                   GetTime() - leftPressedTime > 0.5) {
+            delta -= (max - min) * 0.7f * deltaTime;
         }
-        if (IsKeyPressed(KEY_RIGHT)) {
+
+        static double rightPressedTime = 0.0;
+        if (IsKeyPressed(KEY_RIGHT) || IsKeyPressed(KEY_D)) {
             delta += step;
+            rightPressedTime = GetTime();
+        } else if ((IsKeyDown(KEY_RIGHT) || IsKeyDown(KEY_D)) &&
+                   GetTime() - rightPressedTime > 0.5) {
+            delta += (max - min) * 0.7f * deltaTime;
         }
         *value = Clamp(*value + delta, min, max);
     }
@@ -141,7 +153,7 @@ void Slider(FontSetting *fontSetting, double deltaTime,
 static
 int GetNewSelectionIndex(int selectionIndex, bool optionsOpened) {
     if (selectionIndex == -1) {
-        return IsNextSelected() ? 0 : -1;
+        return IsNextSelected() || IsPreviousSelected() ? 0 : -1;
     }
     int indexCount = optionsOpened ? 8 : 3; // fixme
     if (IsNextSelected()) {
@@ -165,7 +177,7 @@ bool ShowMainMenu(FontSetting *fontSetting, float *fov, float *bobIntensity,
                   int *mouseSpeedX, int *mouseSpeedY) {
     bool continueGame = false;
     int selectionIndex = -1;
-    double lastTime = GetTime();
+    float lastTime = (float)GetTime();
 
     while (!continueGame) {
         if (WindowShouldClose()) {
@@ -175,8 +187,8 @@ bool ShowMainMenu(FontSetting *fontSetting, float *fov, float *bobIntensity,
             continueGame = true;
         }
 
-        double time = GetTime();
-        double delta = time - lastTime;
+        float time = (float)GetTime();
+        float delta = time - lastTime;
         lastTime = time;
         int screenSizeOffsetX = (GetScreenWidth() - 640) / 2;
         int screenSizeOffsetY = (GetScreenHeight() - 480) / 2;
@@ -241,7 +253,9 @@ bool ShowMainMenu(FontSetting *fontSetting, float *fov, float *bobIntensity,
                        buttonColor, buttonHighlightColor,
                        selectionIndex == 2)) {
                 optionsOpened = false;
-                selectionIndex = 1;
+                if (selectionIndex != -1) {
+                    selectionIndex = 1;
+                }
             }
             controlX += 70.0f;
             controlY += 2.0f;
@@ -305,7 +319,9 @@ bool ShowMainMenu(FontSetting *fontSetting, float *fov, float *bobIntensity,
                        buttonColor, buttonHighlightColor,
                        selectionIndex == 1)) {
                 optionsOpened = true;
-                selectionIndex = 2;
+                if (selectionIndex != -1) {
+                    selectionIndex = 2;
+                }
             }
         }
 

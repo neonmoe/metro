@@ -438,16 +438,17 @@ bool EnsureResourcesExist(void) {
 }
 
 bool ShowEpilepsyWarning(FontSetting *fontSetting) {
-    double showPromptTime = GetTime() + 1.0;
-    double showPromptFadeDuration = 0.3;
-    double acceptPromptTime = GetTime() + 0.5;
+    float time = (float)GetTime();
+    float showPromptTime = time + 1.0f;
+    float showPromptFadeDuration = 0.3f;
+    float acceptPromptTime = time + 0.5f;
 
     while (GetTime() < acceptPromptTime || IsKeyUp(KEY_SPACE)) {
         if (WindowShouldClose()) {
             return true;
         }
 
-        double time = GetTime();
+        time = (float)GetTime();
 
         BeginDrawing();
         ClearBackground((Color){ 0x44, 0x11, 0x11, 0xFF });
@@ -456,9 +457,9 @@ bool ShowEpilepsyWarning(FontSetting *fontSetting) {
         float y = (GetScreenHeight() - 480.0f) / 2.0f + 400.0f;
 
         if (time > showPromptTime) {
-            double progress =
+            float progress =
                 Clamp((time - showPromptTime) / showPromptFadeDuration, 0, 1);
-            int alpha = (int)(progress * 255);
+            char alpha = (char)(progress * 255);
             DrawTextEx(fontSetting->clearFont, "Press Space to continue",
                        (Vector2){ x, y }, 32, 0.0f,
                        (Color){ textColor.r, textColor.g, textColor.b, alpha });
