@@ -158,7 +158,7 @@ SDFSample sdfLightMeshes(vec3 samplePos) {
 }
 
 SDFSample sdfFence(vec3 samplePos) {
-    float z = maxDistance - 20.0f;
+    float z = maxDistance - 15.0f;
     float signDistance = sdfBox(samplePos, vec3(0.0, 1.5, z),
                             vec3(1.9, 0.4, 0.2));
     float poleDistance = sdfBox(samplePos, vec3(-1.5, 0.75, z),

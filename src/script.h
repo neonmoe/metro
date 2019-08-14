@@ -51,7 +51,7 @@ const char *narratorComments[COMMENTS_COUNT][COMMENT_LINES] = {
     {"Back to my metro appreciation. This metro line you're",
      "walking on, is pretty new.",
      "Opened only a few years ago, this extension to the metro",
-     "made it so the it extends to the neighbouring city.",
+     "made it so it extends to the neighbouring city.",
      "I waited for it for all of my high school, but it kept",
      "getting delayed, until I moved to Helsinki myself, heh."},
     {"I'll give you a moment to meditate in the noise.",
