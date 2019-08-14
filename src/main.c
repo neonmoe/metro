@@ -94,6 +94,9 @@ int main(void) {
     InitWindow(DEFAULT_SCREEN_WIDTH, DEFAULT_SCREEN_HEIGHT,
                "A Walk In A Metro Tunnel");
 
+    Image windowIcon = LoadImage(resourcePaths[RESOURCE_ICON]);
+    SetWindowIcon(windowIcon);
+
     if (EnsureResourcesExist()) {
         return 0;
     }

@@ -204,12 +204,13 @@ IF NOT DEFINED QUIET echo COMPILE-INFO: Game compiled into an executable in: !OU
 REM Copy resources
 IF NOT EXIST metro_assets mkdir metro_assets
 cd metro_assets
+IF NOT EXIST "icon.png" cp !ROOT_DIR!\src\icon.png icon.png
 IF NOT EXIST shaders mkdir shaders
 IF EXIST "shaders\sdf_shader.glsl" del shaders\sdf_shader.glsl
 cp !ROOT_DIR!\src\shaders\sdf.glsl shaders\sdf.glsl
 IF NOT EXIST fonts mkdir fonts
-IF NOT EXIST "open_sans.ttf" cp !ROOT_DIR!\vendor\open-sans\open_sans.ttf fonts\open_sans.ttf
-IF NOT EXIST "vt323.ttf" cp !ROOT_DIR!\vendor\vt323\vt323.ttf fonts\vt323.ttf
+IF NOT EXIST "fonts\open_sans.ttf" cp !ROOT_DIR!\vendor\open-sans\open_sans.ttf fonts\open_sans.ttf
+IF NOT EXIST "fonts\vt323.ttf" cp !ROOT_DIR!\vendor\vt323\vt323.ttf fonts\vt323.ttf
 cd ..
 IF NOT DEFINED QUIET echo COMPILE-INFO: Game resources copied into: !OUTPUT_DIR!\
 

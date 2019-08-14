@@ -19,11 +19,13 @@
 #define RESOURCES_H
 
 enum {
-    RESOURCE_OPEN_SANS, RESOURCE_VT323, RESOURCE_SHADER, RESOURCE_COUNT
+    RESOURCE_OPEN_SANS, RESOURCE_VT323, RESOURCE_SHADER, RESOURCE_ICON,
+    RESOURCE_COUNT
 };
 
 const char *resourcePaths[RESOURCE_COUNT] = {
-    "metro_assets/fonts/open_sans.ttf", "metro_assets/fonts/vt323.ttf", "metro_assets/shaders/sdf.glsl"
+    "metro_assets/fonts/open_sans.ttf", "metro_assets/fonts/vt323.ttf",
+    "metro_assets/shaders/sdf.glsl", "metro_assets/icon.png"
 };
 
 #endif
