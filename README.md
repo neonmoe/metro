@@ -1,14 +1,28 @@
 # A Walk In A Metro Tunnel
-A Walk In A Metro Tunnel is a walking simulator. The environment is the
-Ruoholahti-Lauttasaari part of the Helsinki metro, with the interiors
-being completely improvised, but the route based on [some plans found
-on the internet (page 41)][metro-plan].
+A Walk In A Metro Tunnel is a walking simulator. The environment is
+the Ruoholahti-Lauttasaari part of the Helsinki metro, with the
+interiors being completely improvised, but the route based on [some
+plans found on the internet (page 41)][metro-plan].
+
+After writing most of this game, I ran into a problem: the default
+floating-point numbers used in GLSL (that is, 32-bit ones) aren't
+accurate enough after running them through as many transformations as
+the ray marching code does, which results in varying amounts of visual
+noise. To preserve compatibility and avoid complexity, I decided to
+incorporate the noise into this project. So while one theme of this
+game is metros, and the Helsinki Metro specifically, the other part is
+about floating-point inaccuracy, and how you can get some
+understanding about how floating-point numbers work when their errors
+are such a visible part of the world.
 
 The game takes about 25 minutes to walk through completely.
 
 ### Controls
 - WASD or IJKL to move
 - Arrow keys or mouse to look around
+- Shift to run
+- Q to auto-walk (like pressing W/I continuously, but just one key
+  press)
 
 #### Configuration keys
 - B to toggle head bobbing animation
