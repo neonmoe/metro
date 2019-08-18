@@ -270,7 +270,10 @@ int main(void) {
             (running ? 1.4f : 1.0f);
         float targetBob = sinf(bobTime) * HEAD_BOB_MAGNITUDE * bobbingIntensity;
         headBobAmount = Lerp(headBobAmount, targetBob, 0.2f);
-        float relativeX = TransformToMetroSpace(movement, maxDistance).x;
+        Vector3 cameraPositionVec = {
+            cameraPosition[0], cameraPosition[1], cameraPosition[2]
+        };
+        float relativeX = TransformToMetroSpace(cameraPositionVec, maxDistance).x;
         bool onPlank = fabs(relativeX) < 1.0;
         bool onRail = fabs(relativeX) > 0.762 - 0.05 &&
             fabs(relativeX) < 0.762 + 0.05;
