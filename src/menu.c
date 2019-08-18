@@ -24,6 +24,8 @@
 
 static Color textColor = { 0xEE, 0xEE, 0xEE, 0xFF };
 static Color sliderColor = { 0x55, 0x50, 0x40, 0xFF };
+static float optionFontSize = 28.0f;
+static float optionEntryHeight = 40.0f;
 
 static
 bool IsNextSelected(void) {
@@ -78,7 +80,7 @@ bool Button(FontSetting *fontSetting, const char* text, Rectangle button,
         }
     }
     DrawTextEx(*fontSetting->currentFont, text,
-               textPosition, 36, 0.0f, textColor);
+               textPosition, optionFontSize, 0.0f, textColor);
     return clicked;
 }
 
@@ -121,13 +123,13 @@ void Slider(FontSetting *fontSetting, float deltaTime,
 
     // Draw text
     DrawTextEx(*fontSetting->currentFont, text,
-               textPosition, 36, 0.0f, textColor);
-    Vector2 size = MeasureTextEx(*fontSetting->currentFont, text, 36, 0.0f);
+               textPosition, optionFontSize, 0.0f, textColor);
+    Vector2 size = MeasureTextEx(*fontSetting->currentFont, text, optionFontSize, 0.0f);
     textPosition.x += size.x;
     char valueDisplay[16];
     snprintf(valueDisplay, 16, formattingString, *value);
     DrawTextEx(*fontSetting->currentFont, valueDisplay,
-               textPosition, 36, 0.0f, textColor);
+               textPosition, optionFontSize, 0.0f, textColor);
 
     if (pressedSlider == text) {
         if (IsMouseButtonDown(MOUSE_LEFT_BUTTON)) {
@@ -190,6 +192,15 @@ int GetNewSelectionIndex(int selectionIndex, bool optionsOpened) {
     return selectionIndex;
 }
 
+static
+int GetUIScale(void) {
+    int width = GetScreenWidth();
+    int height = GetScreenHeight();
+    int size = width < height ? width : height;
+    int scale = size / 480;
+    return scale < 1 ? 1 : scale;
+}
+
 static bool optionsOpened = false;
 
 bool ShowMainMenu(FontSetting *fontSetting, Texture2D gameRenderTexture,
@@ -200,6 +211,9 @@ bool ShowMainMenu(FontSetting *fontSetting, Texture2D gameRenderTexture,
     float lastTime = (float)GetTime();
     float startTime = (float)GetTime();
 
+    bool mouseInvertedX = *mouseSpeedX < 0;
+    bool mouseInvertedY = *mouseSpeedY < 0;
+
     while (!continueGame) {
         if (WindowShouldClose()) {
             return true;
@@ -208,11 +222,18 @@ bool ShowMainMenu(FontSetting *fontSetting, Texture2D gameRenderTexture,
             continueGame = true;
         }
 
+        int uiScale = GetUIScale();
+        optionFontSize = 28.0f * uiScale;
+        optionEntryHeight = 40.0f * uiScale;
+
         float time = (float)GetTime();
         float delta = time - lastTime;
         lastTime = time;
-        int screenSizeOffsetX = (GetScreenWidth() - 640) / 2;
-        int screenSizeOffsetY = (GetScreenHeight() - 480) / 2;
+
+        int screenSizeOffsetX = (GetScreenWidth() - 640 * uiScale) / 2;
+        int screenSizeOffsetY = (GetScreenHeight() - 480 * uiScale) / 2;
+        int controlOffsetX = 295 * uiScale;
+
         float fontOffset = fontSetting->clearFontEnabled ? 30.0f : 0.0f;
         Color buttonColor = (Color){ 0x44, 0x44, 0x44, 0xFF };
         Color buttonHighlightColor = (Color){ 0x55, 0x55, 0x55, 0xFF };
@@ -242,14 +263,18 @@ bool ShowMainMenu(FontSetting *fontSetting, Texture2D gameRenderTexture,
         DrawRectangle(0, 0, GetScreenWidth(), GetScreenHeight(),
                       (Color){0x20, 0x24, 0x30, filterAlpha});
 
+        // Draw the header
         DrawTextEx(*fontSetting->currentFont, "A Walk In A Metro Tunnel",
-                   (Vector2) { controlX, controlY }, 48, 0.0f, textColor);
+                   (Vector2) { controlX, controlY },
+                   optionFontSize * 1.5f, 0.0f, textColor);
 
+        // Start drawing the menu
         controlX -= 10.0f;
-        controlY += 90.0f;
+        controlY += 90.0f * uiScale;
         Rectangle startButton = { controlX, controlY,
-                                  240.0f - fontOffset, 50.0f };
-        Vector2 startTextPosition = { controlX + 20.0f, controlY + 5.0f };
+                                  optionEntryHeight * 5.0f - fontOffset,
+                                  optionEntryHeight };
+        Vector2 startTextPosition = { controlX + 20.0f, controlY + 5.0f * uiScale };
         if (Button(fontSetting, gameStarted ? "Continue" : "Start walking",
                    startButton, startTextPosition,
                    buttonColor, buttonHighlightColor,
@@ -258,32 +283,34 @@ bool ShowMainMenu(FontSetting *fontSetting, Texture2D gameRenderTexture,
         }
 
         if (optionsOpened) {
-            controlX += 270.0f;
+            controlX += optionEntryHeight * 5.6f - fontOffset * uiScale;
         } else {
-            controlY += 140.0f;
+            controlY += (optionEntryHeight + 20.0f) * 2.0f;
         }
         if (Button(fontSetting, "Close Application",
                    (Rectangle){ controlX, controlY,
-                           285.0f - fontOffset, 50.0f },
-                   (Vector2){ controlX + 20.0f, controlY + 5.0f },
+                           optionEntryHeight * 5.8f - fontOffset,
+                           optionEntryHeight },
+                   (Vector2){ controlX + 20.0f, controlY + 5.0f * uiScale },
                    redButtonColor, redButtonHighlightColor,
                    selectionIndex == (optionsOpened ? 1 : 2))) {
             return true;
         }
         if (optionsOpened) {
-            controlX -= 270.0f;
-            controlY += 70.0f;
+            controlX -= optionEntryHeight * 5.6f - fontOffset * uiScale;
+            controlY += optionEntryHeight + 20.0f;
         } else {
-            controlY -= 70.0f;
+            controlY -= optionEntryHeight + 20.0f;
         }
 
         if (optionsOpened) {
             controlX += 13.0f;
 
-            controlX -= 70.0f;
+            controlX -= optionEntryHeight + 20.0f;
             controlY -= 2.0f;
             if (Button(fontSetting, "<",
-                       (Rectangle){ controlX, controlY, 40.0f, 40.0f },
+                       (Rectangle){ controlX, controlY,
+                               optionFontSize + 5.0f, optionFontSize + 5.0f },
                        (Vector2){ controlX + 12.0f, controlY + 3.0f },
                        buttonColor, buttonHighlightColor,
                        selectionIndex == 2)) {
@@ -292,65 +319,107 @@ bool ShowMainMenu(FontSetting *fontSetting, Texture2D gameRenderTexture,
                     selectionIndex = 1;
                 }
             }
-            controlX += 70.0f;
+            controlX += optionEntryHeight + 20.0f;
             controlY += 2.0f;
 
-            int fontToggleOffsetX = 385;
             if (Button(fontSetting, "Use fancy font:",
-                       (Rectangle){ controlX + fontToggleOffsetX, controlY,
-                               40.0f, 40.0f },
+                       (Rectangle){ controlX + controlOffsetX, controlY,
+                               optionFontSize, optionFontSize },
                        (Vector2){ controlX, controlY },
                        buttonColor, buttonHighlightColor,
                        selectionIndex == 3)) {
                 SwitchFont(fontSetting);
             }
             if (!fontSetting->clearFontEnabled) {
-                DrawRectangle((int)controlX + fontToggleOffsetX + 8,
-                              (int)controlY + 8, 24, 24, checkedColor);
+                DrawRectangle((int)controlX + controlOffsetX + 8 * uiScale,
+                              (int)controlY + 8 * uiScale,
+                              (int)optionFontSize - 16 * uiScale,
+                              (int)optionFontSize - 16 * uiScale,
+                              checkedColor);
             }
 
-            controlY += 50.0f;
+            controlY += optionEntryHeight;
             Slider(fontSetting, delta, "Field of view: ", "%3.0f",
                    fov, 60.0f, 120.0f, 1.0f,
-                   (Vector2){ controlX + 295.0f, controlY + 19.0f }, 220.0f,
+                   (Vector2){ controlX + controlOffsetX,
+                           controlY + optionFontSize / 2.0f}, 220.0f,
                    (Vector2){ controlX, controlY },
                    buttonColor, buttonHighlightColor,
                    selectionIndex == 4);
 
-            controlY += 50.0f;
+            controlY += optionEntryHeight;
             float bobValue = *bobIntensity * 100.0f;
             Slider(fontSetting, delta, "Bob intensity: ", "%3.0f%%",
                    &bobValue, 0.0f, 100.0f, 1.0f,
-                   (Vector2){ controlX + 295.0f, controlY + 19.0f }, 220.0f,
+                   (Vector2){ controlX + controlOffsetX,
+                           controlY + optionFontSize / 2.0f }, 220.0f,
                    (Vector2){ controlX, controlY },
                    buttonColor, buttonHighlightColor,
                    selectionIndex == 5);
             *bobIntensity = bobValue / 100.0f;
 
-            controlY += 50.0f;
-            float mouseXVal = (float)*mouseSpeedX / 100.0f;
+            controlY += optionEntryHeight;
+            float mouseXVal = fabsf((float)*mouseSpeedX / 100.0f);
             Slider(fontSetting, delta, "Mouse speed X: ", "%1.1f",
-                   &mouseXVal, -4.0f, 4.0f, 0.1f,
-                   (Vector2){ controlX + 295.0f, controlY + 19.0f }, 220.0f,
+                   &mouseXVal, 0.0f, 4.0f, 0.1f,
+                   (Vector2){ controlX + controlOffsetX,
+                           controlY + optionFontSize / 2.0f }, 220.0f,
                    (Vector2){ controlX, controlY },
                    buttonColor, buttonHighlightColor,
                    selectionIndex == 6);
-            *mouseSpeedX = (int)(mouseXVal * 100.0f);
+            *mouseSpeedX = (int)(mouseXVal * 100.0f
+                                 * (mouseInvertedX ? -1.0f : 1.0f));
 
-            controlY += 50.0f;
-            float mouseYVal = (float)*mouseSpeedY / 100.0f;
+            controlY += optionEntryHeight;
+            if (Button(fontSetting, "Invert:",
+                       (Rectangle){ controlX + controlOffsetX, controlY,
+                               optionFontSize, optionFontSize },
+                       (Vector2){ controlX + 20.0f, controlY },
+                       buttonColor, buttonHighlightColor,
+                       selectionIndex == 3)) {
+                mouseInvertedX = !mouseInvertedX;
+            }
+            if (mouseInvertedX) {
+                DrawRectangle((int)controlX + controlOffsetX + 8 * uiScale,
+                              (int)controlY + 8 * uiScale,
+                              (int)optionFontSize - 16 * uiScale,
+                              (int)optionFontSize - 16 * uiScale,
+                              checkedColor);
+            }
+
+            controlY += optionEntryHeight;
+            float mouseYVal = fabsf((float)*mouseSpeedY / 100.0f);
             Slider(fontSetting, delta, "Mouse speed Y: ", "%1.1f",
-                   &mouseYVal, -4.0f, 4.0f, 0.1f,
-                   (Vector2){ controlX + 295.0f, controlY + 19.0f }, 220.0f,
+                   &mouseYVal, 0.0f, 4.0f, 0.1f,
+                   (Vector2){ controlX + controlOffsetX, controlY + 19.0f }, 220.0f,
                    (Vector2){ controlX, controlY },
                    buttonColor, buttonHighlightColor,
                    selectionIndex == 7);
-            *mouseSpeedY = (int)(mouseYVal * 100.0f);
+            *mouseSpeedY = (int)(mouseYVal * 100.0f
+                                 * (mouseInvertedY ? -1.0f : 1.0f));
+
+            controlY += optionEntryHeight;
+            if (Button(fontSetting, "Invert:",
+                       (Rectangle){ controlX + controlOffsetX, controlY,
+                               optionFontSize, optionFontSize },
+                       (Vector2){ controlX + 20.0f, controlY },
+                       buttonColor, buttonHighlightColor,
+                       selectionIndex == 3)) {
+                mouseInvertedY = !mouseInvertedY;
+            }
+            if (mouseInvertedY) {
+                DrawRectangle((int)controlX + controlOffsetX + 8 * uiScale,
+                              (int)controlY + 8 * uiScale,
+                              (int)optionFontSize - 16 * uiScale,
+                              (int)optionFontSize - 16 * uiScale,
+                              checkedColor);
+            }
         } else {
             if (Button(fontSetting, "Options",
                        (Rectangle){ controlX, controlY,
-                               165.0f - fontOffset, 50.0f },
-                       (Vector2){ controlX + 20.0f, controlY + 5.0f },
+                               optionEntryHeight * 3.6f - fontOffset,
+                               optionEntryHeight },
+                       (Vector2){ controlX + 20.0f, controlY + 5.0f * uiScale },
                        buttonColor, buttonHighlightColor,
                        selectionIndex == 1)) {
                 optionsOpened = true;
