@@ -236,13 +236,11 @@ int main(void) {
             movement.x += delta * speed * cosf(r);
             movement.z += delta * speed * -sinf(r);
             walking = true;
-            autoMove = false;
         }
         if (IsKeyDown(KEY_A) || IsKeyDown(KEY_J)) {
             movement.x -= delta * speed * cosf(r);
             movement.z -= delta * speed * -sinf(r);
             walking = true;
-            autoMove = false;
         }
 
         // The actual movement
