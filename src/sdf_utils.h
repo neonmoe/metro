@@ -102,9 +102,10 @@ double GetXOffsetD(double z, double maxDistance) {
 }
 
 Vector3d GetPathNormalD(Vector3d samplePos, double maxDistance) {
+    double epsilon = 0.000000001;
     double currentXOffset = GetXOffsetD(samplePos.z, maxDistance);
-    double nextXOffset = GetXOffsetD(samplePos.z + 0.001f, maxDistance);
-    return Vector3dNormalize((Vector3d){ -0.001, 0.0,
+    double nextXOffset = GetXOffsetD(samplePos.z + epsilon, maxDistance);
+    return Vector3dNormalize((Vector3d){ -epsilon, 0.0,
                 nextXOffset - currentXOffset });
 }
 
