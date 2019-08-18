@@ -505,10 +505,10 @@ bool ShowEpilepsyWarning(FontSetting *fontSetting) {
 }
 
 Vector3 GetLegalPlayerMovement(Vector3 position, Vector3 movement, float maxDistance) {
-    Vector3 newPos = Vector3Add(position, movement);
-    Vector3 transformedPos = TransformToMetroSpace(newPos, maxDistance);
+    Vector3d newPos = Vector3dAdd(FromVector3(position), FromVector3(movement));
+    Vector3d transformedPos = TransformToMetroSpaceD(newPos, maxDistance);
     if (transformedPos.x > -1.8f && transformedPos.x < 1.8f) {
-        return newPos;
+        return ToVector3(newPos);
     }
     return position;
 }
