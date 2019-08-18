@@ -46,10 +46,6 @@
 
 #define SECONDS_PER_CHARACTER 0.1f
 
-// Defines to make recording promotional material easier
-#define NARRATION_ENABLED true
-#define BACKTRACKING_WARNING_ENABLED true
-
 bool FileMissing(const char *path);
 void DrawWarningText(const char *text, int fontSize, int y, Color color);
 bool EnsureResourcesExist(void);
@@ -69,6 +65,7 @@ int main(void) {
     float headBobAmount = 0.0f;
     bool autoMove = false;
     bool running = false;
+    float metersWalked = 0.0f;
 
     // Mouselook values
     int mouseX = -1;
@@ -87,6 +84,7 @@ int main(void) {
     float bobbingIntensity = 1.0f;
     int mouseSpeedX = 150;
     int mouseSpeedY = 150;
+    bool showMetersWalked = false;
 
     SetTraceLogLevel(LOG_WARNING);
     SetConfigFlags(FLAG_VSYNC_HINT | FLAG_WINDOW_RESIZABLE);
@@ -156,7 +154,7 @@ int main(void) {
             windowClosedInMenu |=
                 ShowMainMenu(&fontSetting, targetTex.texture,
                              firstMainMenuShown, &fieldOfView, &bobbingIntensity,
-                             &mouseSpeedX, &mouseSpeedY);
+                             &mouseSpeedX, &mouseSpeedY, &showMetersWalked);
             firstMainMenuShown = true;
         }
 
@@ -255,8 +253,13 @@ int main(void) {
         right = Vector3Scale(right, Vector3DotProduct(right, movement));
         position = GetLegalPlayerMovement(position, right, maxDistance);
         // ..and finally applying it to the actual coordinates
+        float previousX = cameraPosition[0];
+        float previousZ = cameraPosition[2];
         cameraPosition[0] = position.x;
         cameraPosition[2] = Clamp(position.z, -10.0f, maxDistance + 10.0f);
+        float deltaX = cameraPosition[0] - previousX;
+        float deltaZ = cameraPosition[2] - previousZ;
+        metersWalked += sqrtf(deltaX * deltaX + deltaZ * deltaZ);
 
         if (walking) {
             walkingTime += delta;
@@ -352,8 +355,7 @@ int main(void) {
         // Narration text display
         int screenHeight = GetScreenHeight();
         float fontSize = screenHeight / 240.0f * 12.0f;
-        if (NARRATION_ENABLED &&
-            narrationStage >= 0 && narrationStage < COMMENTS_COUNT) {
+        if (narrationStage >= 0 && narrationStage < COMMENTS_COUNT) {
             narrationTime += delta;
             int linesPerScreen = 2;
             int lineIndex = GetLine(narrationTime, narrationStage,
@@ -374,11 +376,17 @@ int main(void) {
         }
 
         // Warning for the player that they're going backwards
-        if (BACKTRACKING_WARNING_ENABLED &&
-            backtracking && forwardDotMovement < 0.0) {
+        if (backtracking && forwardDotMovement < 0.0) {
             DisplaySubtitle(*fontSetting.currentFont,
                             "Warning: You're going the wrong way.",
                             fontSize, 50.0f);
+        }
+
+        if (showMetersWalked) {
+            const char *text = TextFormat("%4.0fm", metersWalked);
+            DrawTextEx(*fontSetting.currentFont, text,
+                       (Vector2){ 30.0f, 30.0f },
+                       fontSize, 0.0f, YELLOW);
         }
 
         if (IsKeyDown(KEY_F3)) {

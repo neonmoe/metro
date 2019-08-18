@@ -22,10 +22,17 @@
 #include "raymath.h"
 #include "render_utils.h"
 
+// These are the font and row height values used when no scaling is applied
+#define BASE_OPTION_FONT_SIZE 26.0f
+#define BASE_OPTION_ENTRY_HEIGHT 36.0f
+
+//  These following two values are modified based on screen res
+static float optionFontSize = BASE_OPTION_FONT_SIZE;
+static float optionEntryHeight = BASE_OPTION_ENTRY_HEIGHT;
+static int uiScale = 1;
+
 static Color textColor = { 0xEE, 0xEE, 0xEE, 0xFF };
 static Color sliderColor = { 0x55, 0x50, 0x40, 0xFF };
-static float optionFontSize = 28.0f;
-static float optionEntryHeight = 40.0f;
 
 static
 bool IsNextSelected(void) {
@@ -50,6 +57,8 @@ bool IsSelectionActivated(void) {
 
 static
 void DrawOutline(Rectangle button, int offset, int thickness, Color color) {
+    offset *= uiScale;
+    thickness *= uiScale;
     Rectangle selectRect = {
         button.x - offset, button.y - offset,
         button.width + offset * 2, button.height + offset * 2
@@ -99,12 +108,13 @@ void Slider(FontSetting *fontSetting, float deltaTime,
 
     // Draw slider line
     Rectangle slider = {
-        sliderStart.x, sliderStart.y, width, 2.0f
+        sliderStart.x, sliderStart.y, width, 2.0f * uiScale
     };
     DrawRectangleRec(slider, sliderColor);
     // Draw handle
     Rectangle button = {
-        sliderStart.x - 8.0f, sliderStart.y - 12.0f, 16.0f, 24.0f
+        sliderStart.x - 8.0f * uiScale, sliderStart.y - 12.0f * uiScale,
+        16.0f * uiScale, 24.0f * uiScale
     };
     button.x += width * (*value - min) / (max - min);
     if (CheckCollisionPointRec(mousePosition, button)) {
@@ -205,7 +215,7 @@ static bool optionsOpened = false;
 
 bool ShowMainMenu(FontSetting *fontSetting, Texture2D gameRenderTexture,
                   bool gameStarted, float *fov, float *bobIntensity,
-                  int *mouseSpeedX, int *mouseSpeedY) {
+                  int *mouseSpeedX, int *mouseSpeedY, bool *showMetersWalked) {
     bool continueGame = false;
     int selectionIndex = -1;
     float lastTime = (float)GetTime();
@@ -222,9 +232,9 @@ bool ShowMainMenu(FontSetting *fontSetting, Texture2D gameRenderTexture,
             continueGame = true;
         }
 
-        int uiScale = GetUIScale();
-        optionFontSize = 28.0f * uiScale;
-        optionEntryHeight = 40.0f * uiScale;
+        uiScale = GetUIScale();
+        optionFontSize = BASE_OPTION_FONT_SIZE * uiScale;
+        optionEntryHeight = BASE_OPTION_ENTRY_HEIGHT * uiScale;
 
         float time = (float)GetTime();
         float delta = time - lastTime;
@@ -311,7 +321,8 @@ bool ShowMainMenu(FontSetting *fontSetting, Texture2D gameRenderTexture,
             if (Button(fontSetting, "<",
                        (Rectangle){ controlX, controlY,
                                optionFontSize + 5.0f, optionFontSize + 5.0f },
-                       (Vector2){ controlX + 12.0f, controlY + 3.0f },
+                       (Vector2){ controlX + 12.0f * uiScale - 4.0f,
+                               controlY + 4.0f * uiScale - 2.0f },
                        buttonColor, buttonHighlightColor,
                        selectionIndex == 2)) {
                 optionsOpened = false;
@@ -331,6 +342,23 @@ bool ShowMainMenu(FontSetting *fontSetting, Texture2D gameRenderTexture,
                 SwitchFont(fontSetting);
             }
             if (!fontSetting->clearFontEnabled) {
+                DrawRectangle((int)controlX + controlOffsetX + 8 * uiScale,
+                              (int)controlY + 8 * uiScale,
+                              (int)optionFontSize - 16 * uiScale,
+                              (int)optionFontSize - 16 * uiScale,
+                              checkedColor);
+            }
+
+            controlY += optionEntryHeight;
+            if (Button(fontSetting, "Show meters walked:",
+                       (Rectangle){ controlX + controlOffsetX, controlY,
+                               optionFontSize, optionFontSize },
+                       (Vector2){ controlX, controlY },
+                       buttonColor, buttonHighlightColor,
+                       selectionIndex == 3)) {
+                *showMetersWalked = !(*showMetersWalked);
+            }
+            if (*showMetersWalked) {
                 DrawRectangle((int)controlX + controlOffsetX + 8 * uiScale,
                               (int)controlY + 8 * uiScale,
                               (int)optionFontSize - 16 * uiScale,
@@ -391,7 +419,8 @@ bool ShowMainMenu(FontSetting *fontSetting, Texture2D gameRenderTexture,
             float mouseYVal = fabsf((float)*mouseSpeedY / 100.0f);
             Slider(fontSetting, delta, "Mouse speed Y: ", "%1.1f",
                    &mouseYVal, 0.0f, 4.0f, 0.1f,
-                   (Vector2){ controlX + controlOffsetX, controlY + 19.0f }, 220.0f,
+                   (Vector2){ controlX + controlOffsetX,
+                           controlY + optionFontSize / 2.0f }, 220.0f,
                    (Vector2){ controlX, controlY },
                    buttonColor, buttonHighlightColor,
                    selectionIndex == 7);
