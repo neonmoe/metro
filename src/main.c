@@ -532,9 +532,9 @@ void DisplaySubtitle(Font font, const char *subtitle, float fontSize, float y) {
 }
 
 int GetLine(float narrationTime, int narrationStage, int linesPerScreen) {
-    int lineIndex = 0;
     float timeCounter = 0.0f;
     const char **lines = narratorComments[narrationStage];
+    int lineIndex = 0;
     for (; lineIndex < COMMENT_LINES; lineIndex += linesPerScreen) {
         for (int j = 0; j < linesPerScreen; j++) {
             const char *line = lines[lineIndex + j];

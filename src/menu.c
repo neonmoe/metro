@@ -224,12 +224,18 @@ bool ShowMainMenu(FontSetting *fontSetting, Texture2D gameRenderTexture,
     bool mouseInvertedX = *mouseSpeedX < 0;
     bool mouseInvertedY = *mouseSpeedY < 0;
 
+    bool escReleased = false;
+
     while (!continueGame) {
         if (WindowShouldClose()) {
             return true;
         }
-        if (IsKeyPressed(KEY_P)) {
+
+        if (IsKeyPressed(KEY_ESCAPE) && escReleased && gameStarted) {
             continueGame = true;
+        }
+        if (IsKeyReleased(KEY_ESCAPE)) {
+            escReleased = true;
         }
 
         uiScale = GetUIScale();

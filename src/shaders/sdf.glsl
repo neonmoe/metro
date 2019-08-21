@@ -38,7 +38,7 @@
 #define COLOR_DISPLAY_BACK vec3(93.0 / 255.0, 93.0 / 255.0, 79.0 / 255.0)
 #define COLOR_DISPLAY_LIGHT vec3(120.0 / 255.0, 150.0 / 255.0, 270.0 / 255.0)
 
-#define STATION_START_Z (maxDistance - 100.0)
+#define STATION_START_Z (maxDistance - 120.0)
 #define STATION_WIDTH 16.0
 
 struct Camera {
@@ -167,7 +167,7 @@ SDFSample sdfLightMeshes(vec3 samplePos) {
     vec3 period = vec3(0.0, 0.0, 9.0);
     vec3 repeatedSample = mod(samplePos, period) - 0.5 * period;
     float distance = sdfRoundedBox(repeatedSample, vec3(-1.8, 3.6, -1.0), vec3(0.2, 0.2, 0.3), 0.05);
-    if (samplePos.z > STATION_START_Z) {
+    if (samplePos.z > STATION_START_Z && samplePos.z <= STATION_START_Z + 90.0) {
         return SDFSample(100000.0, vec3(0.0, 0.0, 0.0));
     } else if (abs(floor(samplePos.z / 9.0) - stage) <= 1) {
         return SDFSample(distance, COLOR_LIGHT_ON);
@@ -432,8 +432,8 @@ float get_brightness(vec3 samplePos, vec3 normal, float fog) {
     // Lights along the tunnel
     for (int i = stage - 1; i <= stage + 1; i++) {
         vec3 lightPosition = transformToMetroSpace(vec3(1.8, 3.6, 3.5 + 9.0 * float(i)));
-        if (lightPosition.z > STATION_START_Z) {
-            break;
+        if (lightPosition.z > STATION_START_Z && lightPosition.z <= STATION_START_Z + 90.0) {
+            continue;
         }
         diffuse += get_light_contribution(samplePos, normal, lightPosition,
                                           lightDistance);
