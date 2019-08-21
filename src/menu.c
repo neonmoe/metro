@@ -186,7 +186,7 @@ int GetNewSelectionIndex(int selectionIndex, bool optionsOpened) {
     if (selectionIndex == -1) {
         return IsNextSelected() || IsPreviousSelected() ? 0 : -1;
     }
-    int indexCount = optionsOpened ? 8 : 3;
+    int indexCount = optionsOpened ? 11 : 3;
     if (IsNextSelected()) {
         selectionIndex++;
         if (selectionIndex >= indexCount) {
@@ -355,7 +355,7 @@ bool ShowMainMenu(FontSetting *fontSetting, Texture2D gameRenderTexture,
                                optionFontSize, optionFontSize },
                        (Vector2){ controlX, controlY },
                        buttonColor, buttonHighlightColor,
-                       selectionIndex == 3)) {
+                       selectionIndex == 4)) {
                 *showMetersWalked = !(*showMetersWalked);
             }
             if (*showMetersWalked) {
@@ -373,7 +373,7 @@ bool ShowMainMenu(FontSetting *fontSetting, Texture2D gameRenderTexture,
                            controlY + optionFontSize / 2.0f}, 220.0f,
                    (Vector2){ controlX, controlY },
                    buttonColor, buttonHighlightColor,
-                   selectionIndex == 4);
+                   selectionIndex == 5);
 
             controlY += optionEntryHeight;
             float bobValue = *bobIntensity * 100.0f;
@@ -383,18 +383,18 @@ bool ShowMainMenu(FontSetting *fontSetting, Texture2D gameRenderTexture,
                            controlY + optionFontSize / 2.0f }, 220.0f,
                    (Vector2){ controlX, controlY },
                    buttonColor, buttonHighlightColor,
-                   selectionIndex == 5);
+                   selectionIndex == 6);
             *bobIntensity = bobValue / 100.0f;
 
             controlY += optionEntryHeight;
             float mouseXVal = fabsf((float)*mouseSpeedX / 100.0f);
-            Slider(fontSetting, delta, "Mouse speed X: ", "%1.1f",
+            Slider(fontSetting, delta, "Left/right turn speed: ", "%1.1f",
                    &mouseXVal, 0.0f, 4.0f, 0.1f,
                    (Vector2){ controlX + controlOffsetX,
                            controlY + optionFontSize / 2.0f }, 220.0f,
                    (Vector2){ controlX, controlY },
                    buttonColor, buttonHighlightColor,
-                   selectionIndex == 6);
+                   selectionIndex == 7);
             *mouseSpeedX = (int)(mouseXVal * 100.0f
                                  * (mouseInvertedX ? -1.0f : 1.0f));
 
@@ -404,7 +404,7 @@ bool ShowMainMenu(FontSetting *fontSetting, Texture2D gameRenderTexture,
                                optionFontSize, optionFontSize },
                        (Vector2){ controlX + 20.0f, controlY },
                        buttonColor, buttonHighlightColor,
-                       selectionIndex == 3)) {
+                       selectionIndex == 8)) {
                 mouseInvertedX = !mouseInvertedX;
             }
             if (mouseInvertedX) {
@@ -417,13 +417,13 @@ bool ShowMainMenu(FontSetting *fontSetting, Texture2D gameRenderTexture,
 
             controlY += optionEntryHeight;
             float mouseYVal = fabsf((float)*mouseSpeedY / 100.0f);
-            Slider(fontSetting, delta, "Mouse speed Y: ", "%1.1f",
+            Slider(fontSetting, delta, "Up/down turn speed: ", "%1.1f",
                    &mouseYVal, 0.0f, 4.0f, 0.1f,
                    (Vector2){ controlX + controlOffsetX,
                            controlY + optionFontSize / 2.0f }, 220.0f,
                    (Vector2){ controlX, controlY },
                    buttonColor, buttonHighlightColor,
-                   selectionIndex == 7);
+                   selectionIndex == 9);
             *mouseSpeedY = (int)(mouseYVal * 100.0f
                                  * (mouseInvertedY ? -1.0f : 1.0f));
 
@@ -433,7 +433,7 @@ bool ShowMainMenu(FontSetting *fontSetting, Texture2D gameRenderTexture,
                                optionFontSize, optionFontSize },
                        (Vector2){ controlX + 20.0f, controlY },
                        buttonColor, buttonHighlightColor,
-                       selectionIndex == 3)) {
+                       selectionIndex == 10)) {
                 mouseInvertedY = !mouseInvertedY;
             }
             if (mouseInvertedY) {

@@ -160,25 +160,25 @@ int main(void) {
 
         // Turn around
         if (IsKeyDown(KEY_LEFT)) {
-            cameraRotation[1] -= delta * 120.0f;
+            cameraRotation[1] -= delta * 120.0f * (mouseSpeedX / 100.0f);
             if (cameraRotation[1] < 0.0) {
                 cameraRotation[1] += 360.0f;
             }
         }
         if (IsKeyDown(KEY_RIGHT)) {
-            cameraRotation[1] += delta * 120.0f;
+            cameraRotation[1] += delta * 120.0f * (mouseSpeedX / 100.0f);
             if (cameraRotation[1] > 360) {
                 cameraRotation[1] -= 360.0f;
             }
         }
         if (IsKeyDown(KEY_UP)) {
-            cameraRotation[0] -= delta * 90.0f;
+            cameraRotation[0] -= delta * 90.0f * (mouseSpeedY / 100.0f);
             if (cameraRotation[0] < -90.0) {
                 cameraRotation[0] = -90.0f;
             }
         }
         if (IsKeyDown(KEY_DOWN)) {
-            cameraRotation[0] += delta * 90.0f;
+            cameraRotation[0] += delta * 90.0f * (mouseSpeedY / 100.0f);
             if (cameraRotation[0] > 90.0) {
                 cameraRotation[0] = 90.0f;
             }
