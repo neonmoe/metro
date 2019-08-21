@@ -29,6 +29,11 @@
 #define COLOR_WOOD vec3(184.0 / 255.0, 140.0 / 255.0, 90.0 / 255.0)
 #define COLOR_RAIL vec3(126.0 / 255.0, 123.0 / 255.0, 134.0 / 255.0)
 #define COLOR_TUNNEL vec3(113.0 / 255.0, 113.0 / 255.0, 99.0 / 255.0)
+#define COLOR_YELLOW_LINE vec3(184.0 / 255.0, 184.0 / 255.0, 90.0 / 255.0)
+#define COLOR_DARKENED_PLATFORM vec3(93.0 / 255.0, 93.0 / 255.0, 79.0 / 255.0)
+#define COLOR_DARKENED_ROOF vec3(30.0 / 255.0, 30.0 / 255.0, 30.0 / 255.0)
+#define COLOR_STATION_LINING_WHITE vec3(270.0 / 255.0, 270.0 / 255.0, 270.0 / 255.0)
+#define COLOR_STATION_LINING_RED vec3(300.0 / 255.0, 50.0 / 255.0, 50.0 / 255.0)
 
 #define STATION_START_Z 10.0
 #define STATION_WIDTH 16.0
@@ -207,8 +212,47 @@ SDFSample sdfStationBoxes(vec3 samplePos) {
     return SDFSample(max(-holeDistanceZ, max(-holeDistanceX, distance)), COLOR_TUNNEL);
 }
 
+SDFSample sdfStationYellowLine(vec3 samplePos) {
+    float startZ = STATION_START_Z;
+    if (samplePos.z < startZ || samplePos.z >= startZ + 90.0) {
+        return SDFSample(100000.0, vec3(0.0, 0.0, 0.0));
+    }
+    float centerPoint = STATION_WIDTH / 2.0 + 2.0;
+    vec3 transformedSample = samplePos;
+    transformedSample.x = abs(transformedSample.x + centerPoint) - centerPoint;
+    float distance = sdfBox(transformedSample,
+                            vec3(-4.75, 0.905, STATION_START_Z - 1.0),
+                            vec3(0.15, 0.01, 92.0));
+    return SDFSample(distance, COLOR_YELLOW_LINE);
+}
+
+SDFSample sdfStationDarkenedParts(vec3 samplePos) {
+    float startZ = STATION_START_Z;
+    if (samplePos.z < startZ + 4.0 || samplePos.z >= startZ + 86.0) {
+        return SDFSample(100000.0, vec3(0.0, 0.0, 0.0));
+    }
+    float centerPoint = STATION_WIDTH / 2.0 + 2.0;
+    vec3 transformedSample = samplePos;
+    transformedSample.x = abs(transformedSample.x + centerPoint) - centerPoint;
+    transformedSample.z = mod(transformedSample.z, 7.0);
+    float distance = sdfBox(transformedSample,
+                            vec3(-3.6, 0.9025, 0),
+                            vec3(1.0, 0.005, 3.0));
+    return SDFSample(distance, COLOR_DARKENED_PLATFORM);
+}
+
+SDFSample sdfStationDarkenedRoof(vec3 samplePos) {
+    float startZ = STATION_START_Z;
+    if (samplePos.z < startZ || samplePos.z >= startZ + 90.0) {
+        return SDFSample(100000.0, vec3(0.0, 0.0, 0.0));
+    }
+    float distance = sdfBox(samplePos, vec3(-2.0 - STATION_WIDTH / 2.0, 6.0, startZ + 45.0),
+                            vec3(STATION_WIDTH / 2.0, 0.05, 90.0));
+    return SDFSample(distance, COLOR_DARKENED_ROOF);
+}
+
 #define ROOM_COUNT 3
-#define OBJECTS_COUNT 5
+#define OBJECTS_COUNT 8
 SDFSample sdf(vec3 samplePos, bool ignoreLightMeshes) {
     if (samplePos.z > 0) {
         samplePos = transformFromMetroSpace(samplePos);
@@ -221,10 +265,12 @@ SDFSample sdf(vec3 samplePos, bool ignoreLightMeshes) {
     // - fence at the end
     // - the planks below the rails
     // - the final station
+    //   - the blocks
+    //   - the yellow do not cross? line
+    //   - darkened parts for entry to metro
+    //   - dark roof
     // Scene additions TODO:
     // - rocks/gravel
-    // - station: darkened parts for entry to metro
-    // - station: yellow do not cross? line
     // - station: white/red (very bright?) lining along the roof
     SDFSample roomSamples[ROOM_COUNT] = SDFSample[ROOM_COUNT]
         (sdfTunnel(samplePos),
@@ -235,7 +281,10 @@ SDFSample sdf(vec3 samplePos, bool ignoreLightMeshes) {
          sdfRails(samplePos),
          sdfFence(samplePos),
          sdfRailPlanks(samplePos),
-         sdfStationBoxes(samplePos));
+         sdfStationBoxes(samplePos),
+         sdfStationYellowLine(samplePos),
+         sdfStationDarkenedParts(samplePos),
+         sdfStationDarkenedRoof(samplePos));
 
     float lowestDistance = samples[0].distance;
     vec3 color = samples[0].color;
