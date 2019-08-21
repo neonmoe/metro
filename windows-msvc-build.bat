@@ -10,6 +10,8 @@ set SOURCES=src\*.c
 REM Set your raylib/src location here (relative path!)
 set RAYLIB_SRC=vendor\raylib
 
+set RESOURCE_SOURCES=src\favicon.rc
+
 REM About this build script: it does many things, but in essence, it's
 REM very simple. It has 3 compiler invocations: building raylib (which
 REM is not done always, see logic by searching "Build raylib"), building
@@ -115,6 +117,7 @@ REM Directories
 set "ROOT_DIR=%CD%"
 set "SOURCES=!ROOT_DIR!\!SOURCES!"
 set "RAYLIB_SRC=!ROOT_DIR!\!RAYLIB_SRC!"
+set "RESOURCE_SOURCES=!ROOT_DIR!\!RESOURCE_SOURCES!"
 
 REM Flags
 set OUTPUT_FLAG=/Fe: "!GAME_NAME!"
@@ -193,12 +196,15 @@ REM Build the actual game
 IF NOT DEFINED QUIET echo COMPILE-INFO: Compiling game code.
 IF DEFINED REALLY_QUIET (
   cl.exe !VERBOSITY_FLAG! !COMPILATION_FLAGS! !WARNING_FLAGS! /c /I"!RAYLIB_SRC!" !SOURCES! > NUL 2>&1 || exit /B
-  cl.exe !VERBOSITY_FLAG! !OUTPUT_FLAG! "!ROOT_DIR!\!TEMP_DIR!\*.obj" *.obj !LINK_FLAGS! !SUBSYSTEM_FLAGS! > NUL 2>&1 || exit /B
+  rc.exe !VERBOSITY_FLAG! !RESOURCE_SOURCES! > NUL 2>&1 || exit /B
+  cl.exe !VERBOSITY_FLAG! !OUTPUT_FLAG! "!ROOT_DIR!\!TEMP_DIR!\*.obj" "!ROOT_DIR!\src\*.res" *.obj !LINK_FLAGS! !SUBSYSTEM_FLAGS! > NUL 2>&1 || exit /B
 ) ELSE (
   cl.exe !VERBOSITY_FLAG! !COMPILATION_FLAGS! !WARNING_FLAGS! /c /I"!RAYLIB_SRC!" !SOURCES! || exit /B
-  cl.exe !VERBOSITY_FLAG! !OUTPUT_FLAG! "!ROOT_DIR!\!TEMP_DIR!\*.obj" *.obj !LINK_FLAGS! !SUBSYSTEM_FLAGS! || exit /B
+  rc.exe !VERBOSITY_FLAG! !RESOURCE_SOURCES! || exit /B
+  cl.exe !VERBOSITY_FLAG! !OUTPUT_FLAG! "!ROOT_DIR!\!TEMP_DIR!\*.obj" "!ROOT_DIR!\src\*.res" *.obj !LINK_FLAGS! !SUBSYSTEM_FLAGS! || exit /B
 )
 del *.obj
+del "!ROOT_DIR!\src\*.res"
 IF NOT DEFINED QUIET echo COMPILE-INFO: Game compiled into an executable in: !OUTPUT_DIR!\
 
 REM Copy resources
