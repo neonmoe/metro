@@ -31,6 +31,7 @@
 #define COLOR_TUNNEL vec3(113.0 / 255.0, 113.0 / 255.0, 99.0 / 255.0)
 
 #define STATION_START_Z 10.0
+#define STATION_WIDTH 16.0
 
 struct Camera {
     vec3 position;
@@ -136,7 +137,7 @@ SDFSample sdfTunnel(vec3 samplePos) {
     vec3 period = vec3(0.0, 0.0, 1.0);
     vec3 repeatedSample = mod(samplePos, period) - 0.5 * period;
     repeatedSample.x = abs(repeatedSample.x);
-    float distance = -sdfRoundedBox(repeatedSample, vec3(0.0, 2.5, 0.0), vec3(2.0, 2.5, 1.0), 0.1);
+    float distance = -sdfRoundedBox(repeatedSample, vec3(0.0, 2.0, 0.0), vec3(2.0, 2.0, 1.0), 0.1);
     return SDFSample(distance, COLOR_TUNNEL);
 }
 
@@ -179,12 +180,35 @@ SDFSample sdfFence(vec3 samplePos) {
 
 SDFSample sdfStation(vec3 samplePos) {
     float startZ = STATION_START_Z;
-    float distance = -sdfRoundedBox(samplePos, vec3(-6.0, 3.0, startZ + 45.0), vec3(4.0, 2.0, 45.0), 0.1);
+    float distance = -sdfRoundedBox(samplePos, vec3(-2.0 - STATION_WIDTH / 2.0, 3.5, startZ + 45.0),
+                                    vec3(STATION_WIDTH / 2.0, 2.5, 45.0), 0.1);
     return SDFSample(distance, COLOR_TUNNEL);
 }
 
+SDFSample sdfStationBoxes(vec3 samplePos) {
+    float startZ = STATION_START_Z;
+    if (samplePos.z < startZ || samplePos.z >= startZ + 90.0) {
+        return SDFSample(100000.0, vec3(0.0, 0.0, 0.0));
+    }
+    vec3 period = vec3(0.0, 0.0, 15.0);
+    vec3 repeatedSample = mod(samplePos, period) - 0.5 * period;
+    repeatedSample.x = abs(repeatedSample.x);
+    float distance = sdfBox(repeatedSample, vec3(2.0 + STATION_WIDTH / 2.0, 2.5, 0.0), vec3(1.0, 1.6, 1.25));
+
+    period = vec3(0.15, 0.15, 0.15);
+    repeatedSample = mod(samplePos, period) - 0.5 * period;
+    vec3 repeatedSampleX = repeatedSample;
+    repeatedSampleX.z = 0;
+    vec3 repeatedSampleZ = repeatedSample;
+    repeatedSampleZ.x = 0;
+    float holeDistanceX = sdfBox(repeatedSampleX, vec3(0.0, 0.0, 0.0), vec3(1.0, 1.0, 1.0) * 0.03);
+    float holeDistanceZ = sdfBox(repeatedSampleZ, vec3(0.0, 0.0, 0.0), vec3(1.0, 1.0, 1.0) * 0.03);
+
+    return SDFSample(max(-holeDistanceZ, max(-holeDistanceX, distance)), COLOR_TUNNEL);
+}
+
 #define ROOM_COUNT 3
-#define OBJECTS_COUNT 4
+#define OBJECTS_COUNT 5
 SDFSample sdf(vec3 samplePos, bool ignoreLightMeshes) {
     if (samplePos.z > 0) {
         samplePos = transformFromMetroSpace(samplePos);
@@ -201,16 +225,17 @@ SDFSample sdf(vec3 samplePos, bool ignoreLightMeshes) {
     // - rocks/gravel
     // - station: darkened parts for entry to metro
     // - station: yellow do not cross? line
-    // - station: those metal boxes
+    // - station: white/red (very bright?) lining along the roof
     SDFSample roomSamples[ROOM_COUNT] = SDFSample[ROOM_COUNT]
         (sdfTunnel(samplePos),
-         sdfTunnel(samplePos + vec3(12.0, 0.0, 0.0)),
+         sdfTunnel(samplePos + vec3(2.0 + STATION_WIDTH + 2.0, 0.0, 0.0)),
          sdfStation(samplePos));
     SDFSample samples[OBJECTS_COUNT] = SDFSample[OBJECTS_COUNT]
         (ignoreLightMeshes ? SDFSample(10000.0, vec3(0.0, 0.0, 0.0)) : sdfLightMeshes(samplePos),
          sdfRails(samplePos),
          sdfFence(samplePos),
-         sdfRailPlanks(samplePos));
+         sdfRailPlanks(samplePos),
+         sdfStationBoxes(samplePos));
 
     float lowestDistance = samples[0].distance;
     vec3 color = samples[0].color;
@@ -295,9 +320,11 @@ float get_brightness(vec3 samplePos, vec3 normal, float fog) {
     }
     // Lights in the station
     for (int x = 0; x < 2; x++) {
-        for (int z = 1; z < 10; z++) {
-            vec3 lightPosition = vec3(3.0 + x * 6.0, 4.0,
-                                      STATION_START_Z + z * 9.0);
+        for (int z = 0; z < 10; z++) {
+            float margin = 2.0;
+            float lightGap = STATION_WIDTH - margin * 2.0;
+            vec3 lightPosition = vec3(2.0 + margin + x * lightGap, 4.0,
+                                      STATION_START_Z + z * 9.0 + 4.5);
             lightPosition = transformToMetroSpace(lightPosition);
             diffuse += get_light_contribution(samplePos, normal, lightPosition,
                                               lightDistance);
