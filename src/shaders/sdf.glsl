@@ -33,7 +33,8 @@
 #define COLOR_DARKENED_PLATFORM vec3(93.0 / 255.0, 93.0 / 255.0, 79.0 / 255.0)
 #define COLOR_DARKENED_ROOF vec3(30.0 / 255.0, 30.0 / 255.0, 30.0 / 255.0)
 #define COLOR_STATION_LINING_WHITE vec3(270.0 / 255.0, 270.0 / 255.0, 270.0 / 255.0)
-#define COLOR_STATION_LINING_RED vec3(300.0 / 255.0, 50.0 / 255.0, 50.0 / 255.0)
+#define COLOR_STATION_LINING_RED vec3(270.0 / 255.0, 80.0 / 255.0, 80.0 / 255.0)
+#define COLOR_STATION_LIGHTS vec3(300.0 / 255.0, 300.0 / 255.0, 300.0 / 255.0)
 
 #define STATION_START_Z 10.0
 #define STATION_WIDTH 16.0
@@ -112,6 +113,12 @@ vec4 rotate_y(vec4 direction, float r) {
     return transform * direction;
 }
 
+vec3 random(float x, float y) {
+    return vec3(fract((sin(x * 5.362) + sin(y * 5.742)) * 589174.0),
+                fract((sin(x * 5.822) + sin(y * 5.532)) * 591267.0),
+                fract((sin(x * 5.746) + sin(y * 5.321)) * 586575.0));
+}
+
 /* SDFs: https://www.iquilezles.org/www/articles/distfunctions/distfunctions.htm */
 
 float sdfSphere(vec3 samplePos, vec3 position, float radius) {
@@ -185,17 +192,17 @@ SDFSample sdfFence(vec3 samplePos) {
 
 SDFSample sdfStation(vec3 samplePos) {
     float startZ = STATION_START_Z;
-    float distance = -sdfRoundedBox(samplePos, vec3(-2.0 - STATION_WIDTH / 2.0, 3.5, startZ + 45.0),
-                                    vec3(STATION_WIDTH / 2.0, 2.5, 45.0), 0.1);
+    float distance = -sdfRoundedBox(samplePos, vec3(-2.0 - STATION_WIDTH / 2.0, 4.5, startZ + 45.0),
+                                    vec3(STATION_WIDTH / 2.0, 3.5, 45.0), 0.1);
     return SDFSample(distance, COLOR_TUNNEL);
 }
 
 SDFSample sdfStationBoxes(vec3 samplePos) {
     float startZ = STATION_START_Z;
-    if (samplePos.z < startZ || samplePos.z >= startZ + 90.0) {
+    if (samplePos.z < startZ + 10.0 || samplePos.z >= startZ + 90.0) {
         return SDFSample(100000.0, vec3(0.0, 0.0, 0.0));
     }
-    vec3 period = vec3(0.0, 0.0, 15.0);
+    vec3 period = vec3(0.0, 0.0, 18.0);
     vec3 repeatedSample = mod(samplePos, period) - 0.5 * period;
     repeatedSample.x = abs(repeatedSample.x);
     float distance = sdfBox(repeatedSample, vec3(2.0 + STATION_WIDTH / 2.0, 2.5, 0.0), vec3(1.0, 1.6, 1.25));
@@ -246,13 +253,47 @@ SDFSample sdfStationDarkenedRoof(vec3 samplePos) {
     if (samplePos.z < startZ || samplePos.z >= startZ + 90.0) {
         return SDFSample(100000.0, vec3(0.0, 0.0, 0.0));
     }
-    float distance = sdfBox(samplePos, vec3(-2.0 - STATION_WIDTH / 2.0, 6.0, startZ + 45.0),
+    float distance = sdfBox(samplePos, vec3(-2.0 - STATION_WIDTH / 2.0, 8.0, startZ + 45.0),
                             vec3(STATION_WIDTH / 2.0, 0.05, 90.0));
     return SDFSample(distance, COLOR_DARKENED_ROOF);
 }
 
+SDFSample sdfStationBorderLights(vec3 samplePos) {
+    float startZ = STATION_START_Z;
+    if (samplePos.z < startZ || samplePos.z >= startZ + 90.0) {
+        return SDFSample(100000.0, vec3(0.0, 0.0, 0.0));
+    }
+    float centerPointX = STATION_WIDTH / 2.0 + 2.0;
+    float centerPointZ = startZ + 45.0;
+    vec3 mirroredPos = samplePos;
+    mirroredPos.x = abs(mirroredPos.x + centerPointX) - centerPointX;
+    mirroredPos.z = abs(mirroredPos.z - centerPointZ) + centerPointZ;
+    float distanceX = sdfBox(mirroredPos, vec3(-2.0, 4.3, startZ + 45.0), vec3(0.1, 0.2, 90.0));
+    float distanceZ = sdfBox(mirroredPos, vec3(-2.0 - STATION_WIDTH / 2.0, 4.3, startZ + 90.0),
+                             vec3(STATION_WIDTH / 2.0 + 0.1, 0.2, 0.1));
+    vec3 color = samplePos.y > 4.3 ? COLOR_STATION_LINING_RED : COLOR_STATION_LINING_WHITE;
+    return SDFSample(min(distanceX, distanceZ), color);
+}
+
+SDFSample sdfStationCeilingLights(vec3 samplePos) {
+    float startZ = STATION_START_Z;
+    if (samplePos.z < startZ + 5.0 || samplePos.z >= startZ + 85.0) {
+        return SDFSample(100000.0, vec3(0.0, 0.0, 0.0));
+    }
+    vec3 rand = random(floor(samplePos.x / 1.5), floor(samplePos.z / 1.5));
+    vec3 period = vec3(1.5, 0.0, 1.5);
+    vec3 repeatedSample = mod(samplePos, period) - 0.5 * period;
+    float distance = sdfBox(repeatedSample, vec3(floor(rand.x * 10.0) / 10.0 * 0.3,
+                                                 floor(rand.y * 10.0) / 10.0 + 6.5,
+                                                 floor(rand.z * 10.0) / 10.0 * 0.3),
+                            vec3(0.3, 0.2, 0.3));
+    float boundingBoxDistance = sdfBox(samplePos, vec3(-2.0 - STATION_WIDTH / 2.0, 6.5, startZ + 45.0),
+                                       vec3(STATION_WIDTH / 2.0 - 3.0, 2.0, 41.0));
+    return SDFSample(max(distance, boundingBoxDistance), COLOR_STATION_LIGHTS);
+}
+
 #define ROOM_COUNT 3
-#define OBJECTS_COUNT 8
+#define OBJECTS_COUNT 10
 SDFSample sdf(vec3 samplePos, bool ignoreLightMeshes) {
     if (samplePos.z > 0) {
         samplePos = transformFromMetroSpace(samplePos);
@@ -269,9 +310,9 @@ SDFSample sdf(vec3 samplePos, bool ignoreLightMeshes) {
     //   - the yellow do not cross? line
     //   - darkened parts for entry to metro
     //   - dark roof
+    //   - white/red lining along the roof
     // Scene additions TODO:
     // - rocks/gravel
-    // - station: white/red (very bright?) lining along the roof
     SDFSample roomSamples[ROOM_COUNT] = SDFSample[ROOM_COUNT]
         (sdfTunnel(samplePos),
          sdfTunnel(samplePos + vec3(2.0 + STATION_WIDTH + 2.0, 0.0, 0.0)),
@@ -284,7 +325,9 @@ SDFSample sdf(vec3 samplePos, bool ignoreLightMeshes) {
          sdfStationBoxes(samplePos),
          sdfStationYellowLine(samplePos),
          sdfStationDarkenedParts(samplePos),
-         sdfStationDarkenedRoof(samplePos));
+         sdfStationDarkenedRoof(samplePos),
+         sdfStationBorderLights(samplePos),
+         sdfStationCeilingLights(samplePos));
 
     float lowestDistance = samples[0].distance;
     vec3 color = samples[0].color;
