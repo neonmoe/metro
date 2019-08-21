@@ -30,6 +30,8 @@
 #define COLOR_RAIL vec3(126.0 / 255.0, 123.0 / 255.0, 134.0 / 255.0)
 #define COLOR_TUNNEL vec3(113.0 / 255.0, 113.0 / 255.0, 99.0 / 255.0)
 
+#define STATION_START_Z 10.0
+
 struct Camera {
     vec3 position;
     vec3 direction;
@@ -134,7 +136,7 @@ SDFSample sdfTunnel(vec3 samplePos) {
     vec3 period = vec3(0.0, 0.0, 1.0);
     vec3 repeatedSample = mod(samplePos, period) - 0.5 * period;
     repeatedSample.x = abs(repeatedSample.x);
-    float distance = -sdfRoundedBox(repeatedSample, vec3(0.0, 2.0, 0.0), vec3(2.0, 2.0, 1.0), 0.1);
+    float distance = -sdfRoundedBox(repeatedSample, vec3(0.0, 2.5, 0.0), vec3(2.0, 2.5, 1.0), 0.1);
     return SDFSample(distance, COLOR_TUNNEL);
 }
 
@@ -150,7 +152,9 @@ SDFSample sdfLightMeshes(vec3 samplePos) {
     vec3 period = vec3(0.0, 0.0, 9.0);
     vec3 repeatedSample = mod(samplePos, period) - 0.5 * period;
     float distance = sdfRoundedBox(repeatedSample, vec3(-1.8, 3.6, -1.0), vec3(0.2, 0.2, 0.3), 0.05);
-    if (abs(floor(samplePos.z / 9.0) - stage) <= 1) {
+    if (samplePos.z > STATION_START_Z) {
+        return SDFSample(100000.0, vec3(0.0, 0.0, 0.0));
+    } else if (abs(floor(samplePos.z / 9.0) - stage) <= 1) {
         return SDFSample(distance, COLOR_LIGHT_ON);
     } else {
         return SDFSample(distance, COLOR_LIGHT_OFF);
@@ -173,7 +177,14 @@ SDFSample sdfFence(vec3 samplePos) {
     }
 }
 
-#define OBJECTS_COUNT 5
+SDFSample sdfStation(vec3 samplePos) {
+    float startZ = STATION_START_Z;
+    float distance = -sdfRoundedBox(samplePos, vec3(-6.0, 3.0, startZ + 45.0), vec3(4.0, 2.0, 45.0), 0.1);
+    return SDFSample(distance, COLOR_TUNNEL);
+}
+
+#define ROOM_COUNT 3
+#define OBJECTS_COUNT 4
 SDFSample sdf(vec3 samplePos, bool ignoreLightMeshes) {
     if (samplePos.z > 0) {
         samplePos = transformFromMetroSpace(samplePos);
@@ -184,12 +195,19 @@ SDFSample sdf(vec3 samplePos, bool ignoreLightMeshes) {
     // - the lights
     // - the rails
     // - fence at the end
-    // - and the planks below the rails
+    // - the planks below the rails
+    // - the final station
     // Scene additions TODO:
     // - rocks/gravel
+    // - station: darkened parts for entry to metro
+    // - station: yellow do not cross? line
+    // - station: those metal boxes
+    SDFSample roomSamples[ROOM_COUNT] = SDFSample[ROOM_COUNT]
+        (sdfTunnel(samplePos),
+         sdfTunnel(samplePos + vec3(12.0, 0.0, 0.0)),
+         sdfStation(samplePos));
     SDFSample samples[OBJECTS_COUNT] = SDFSample[OBJECTS_COUNT]
         (ignoreLightMeshes ? SDFSample(10000.0, vec3(0.0, 0.0, 0.0)) : sdfLightMeshes(samplePos),
-         sdfTunnel(samplePos),
          sdfRails(samplePos),
          sdfFence(samplePos),
          sdfRailPlanks(samplePos));
@@ -202,6 +220,20 @@ SDFSample sdf(vec3 samplePos, bool ignoreLightMeshes) {
             color = samples[i].color;
         }
     }
+    float roomDistance = roomSamples[0].distance;
+    vec3 roomColor = roomSamples[0].color;
+    for (int i = 1; i < ROOM_COUNT; i++) {
+        if (roomSamples[i].distance > roomDistance) {
+            roomDistance = roomSamples[i].distance;
+            roomColor = roomSamples[i].color;
+        }
+    }
+
+    if (roomDistance < lowestDistance) {
+        lowestDistance = roomDistance;
+        color = roomColor;
+    }
+
     return SDFSample(lowestDistance, color);
 }
 
@@ -239,17 +271,37 @@ float get_shadow(vec3 samplePos, vec3 lightPos) {
     return 0.0;
 }
 
+float get_light_contribution(vec3 position, vec3 normal,
+                             vec3 lightPosition, float lightDistance) {
+    vec3 lightDir = lightPosition - position;
+    return (1.0 - max(0.0, min(1.0, length(lightDir) / lightDistance))) *
+        max(0.0, dot(normal, normalize(lightDir))) *
+        (1.0 - get_shadow(position, lightPosition) * 0.75) * 0.35;
+}
+
 // Specular should probably be passed as a paramenter, and sourced from SDFSample
 float get_brightness(vec3 samplePos, vec3 normal, float fog) {
     float ambient = 0.1;
     float diffuse = 0.0;
+    float lightDistance = 11.0;
+    // Lights along the tunnel
     for (int i = stage - 1; i <= stage + 1; i++) {
         vec3 lightPosition = transformToMetroSpace(vec3(1.8, 3.6, 3.5 + 9.0 * float(i)));
-        vec3 lightDir = lightPosition - samplePos;
-        float lightDistance = 11.0;
-        diffuse += pow(1.0 - max(0.0, min(1.0, length(lightDir) / lightDistance)), 0.5) *
-            max(0.0, dot(normal, normalize(lightDir))) *
-            (1.0 - get_shadow(samplePos, lightPosition) * 0.75) * 0.35;
+        if (lightPosition.z > STATION_START_Z) {
+            break;
+        }
+        diffuse += get_light_contribution(samplePos, normal, lightPosition,
+                                          lightDistance);
+    }
+    // Lights in the station
+    for (int x = 0; x < 2; x++) {
+        for (int z = 1; z < 10; z++) {
+            vec3 lightPosition = vec3(3.0 + x * 6.0, 4.0,
+                                      STATION_START_Z + z * 9.0);
+            lightPosition = transformToMetroSpace(lightPosition);
+            diffuse += get_light_contribution(samplePos, normal, lightPosition,
+                                              lightDistance);
+        }
     }
     return min(1.0, diffuse) + ambient;
 }
