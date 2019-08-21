@@ -24,7 +24,7 @@
 
 // These are the font and row height values used when no scaling is applied
 #define BASE_OPTION_FONT_SIZE 26.0f
-#define BASE_OPTION_ENTRY_HEIGHT 36.0f
+#define BASE_OPTION_ENTRY_HEIGHT 32.0f
 
 //  These following two values are modified based on screen res
 static float optionFontSize = BASE_OPTION_FONT_SIZE;
@@ -186,7 +186,7 @@ int GetNewSelectionIndex(int selectionIndex, bool optionsOpened) {
     if (selectionIndex == -1) {
         return IsNextSelected() || IsPreviousSelected() ? 0 : -1;
     }
-    int indexCount = optionsOpened ? 11 : 3;
+    int indexCount = optionsOpened ? 12 : 3;
     if (IsNextSelected()) {
         selectionIndex++;
         if (selectionIndex >= indexCount) {
@@ -215,7 +215,8 @@ static bool optionsOpened = false;
 
 bool ShowMainMenu(FontSetting *fontSetting, Texture2D gameRenderTexture,
                   bool gameStarted, float *fov, float *bobIntensity,
-                  int *mouseSpeedX, int *mouseSpeedY, bool *showMetersWalked) {
+                  int *mouseSpeedX, int *mouseSpeedY, bool *showMetersWalked,
+                  bool *narrationEnabled) {
     bool continueGame = false;
     int selectionIndex = -1;
     float lastTime = (float)GetTime();
@@ -288,9 +289,10 @@ bool ShowMainMenu(FontSetting *fontSetting, Texture2D gameRenderTexture,
         controlX -= 10.0f;
         controlY += 90.0f * uiScale;
         Rectangle startButton = { controlX, controlY,
-                                  optionEntryHeight * 5.0f - fontOffset,
+                                  optionEntryHeight * 5.2f - fontOffset,
                                   optionEntryHeight };
-        Vector2 startTextPosition = { controlX + 20.0f, controlY + 5.0f * uiScale };
+        Vector2 startTextPosition = { controlX + 10.0f * uiScale,
+                                      controlY + 3.5f * uiScale };
         if (Button(fontSetting, gameStarted ? "Continue" : "Start walking",
                    startButton, startTextPosition,
                    buttonColor, buttonHighlightColor,
@@ -305,9 +307,10 @@ bool ShowMainMenu(FontSetting *fontSetting, Texture2D gameRenderTexture,
         }
         if (Button(fontSetting, "Close Application",
                    (Rectangle){ controlX, controlY,
-                           optionEntryHeight * 5.8f - fontOffset,
+                           optionEntryHeight * 6.4f - fontOffset,
                            optionEntryHeight },
-                   (Vector2){ controlX + 20.0f, controlY + 5.0f * uiScale },
+                   (Vector2){ controlX + 10.0f * uiScale,
+                           controlY + 3.5f * uiScale },
                    redButtonColor, redButtonHighlightColor,
                    selectionIndex == (optionsOpened ? 1 : 2))) {
             return true;
@@ -356,12 +359,29 @@ bool ShowMainMenu(FontSetting *fontSetting, Texture2D gameRenderTexture,
             }
 
             controlY += optionEntryHeight;
-            if (Button(fontSetting, "Show meters walked:",
+            if (Button(fontSetting, "Narration:",
                        (Rectangle){ controlX + controlOffsetX, controlY,
                                optionFontSize, optionFontSize },
                        (Vector2){ controlX, controlY },
                        buttonColor, buttonHighlightColor,
                        selectionIndex == 4)) {
+                *narrationEnabled = !(*narrationEnabled);
+            }
+            if (*narrationEnabled) {
+                DrawRectangle((int)controlX + controlOffsetX + 8 * uiScale,
+                              (int)controlY + 8 * uiScale,
+                              (int)optionFontSize - 16 * uiScale,
+                              (int)optionFontSize - 16 * uiScale,
+                              checkedColor);
+            }
+
+            controlY += optionEntryHeight;
+            if (Button(fontSetting, "Show meters walked:",
+                       (Rectangle){ controlX + controlOffsetX, controlY,
+                               optionFontSize, optionFontSize },
+                       (Vector2){ controlX, controlY },
+                       buttonColor, buttonHighlightColor,
+                       selectionIndex == 5)) {
                 *showMetersWalked = !(*showMetersWalked);
             }
             if (*showMetersWalked) {
@@ -376,20 +396,20 @@ bool ShowMainMenu(FontSetting *fontSetting, Texture2D gameRenderTexture,
             Slider(fontSetting, delta, "Field of view: ", "%3.0f",
                    fov, 60.0f, 120.0f, 1.0f,
                    (Vector2){ controlX + controlOffsetX,
-                           controlY + optionFontSize / 2.0f}, 220.0f,
+                           controlY + optionFontSize / 2.0f}, 120.0f * uiScale,
                    (Vector2){ controlX, controlY },
                    buttonColor, buttonHighlightColor,
-                   selectionIndex == 5);
+                   selectionIndex == 6);
 
             controlY += optionEntryHeight;
             float bobValue = *bobIntensity * 100.0f;
             Slider(fontSetting, delta, "Bob intensity: ", "%3.0f%%",
                    &bobValue, 0.0f, 100.0f, 1.0f,
                    (Vector2){ controlX + controlOffsetX,
-                           controlY + optionFontSize / 2.0f }, 220.0f,
+                           controlY + optionFontSize / 2.0f }, 120.0f * uiScale,
                    (Vector2){ controlX, controlY },
                    buttonColor, buttonHighlightColor,
-                   selectionIndex == 6);
+                   selectionIndex == 7);
             *bobIntensity = bobValue / 100.0f;
 
             controlY += optionEntryHeight;
@@ -397,10 +417,10 @@ bool ShowMainMenu(FontSetting *fontSetting, Texture2D gameRenderTexture,
             Slider(fontSetting, delta, "Left/right turn speed: ", "%1.1f",
                    &mouseXVal, 0.0f, 4.0f, 0.1f,
                    (Vector2){ controlX + controlOffsetX,
-                           controlY + optionFontSize / 2.0f }, 220.0f,
+                           controlY + optionFontSize / 2.0f }, 120.0f * uiScale,
                    (Vector2){ controlX, controlY },
                    buttonColor, buttonHighlightColor,
-                   selectionIndex == 7);
+                   selectionIndex == 8);
             *mouseSpeedX = (int)(mouseXVal * 100.0f
                                  * (mouseInvertedX ? -1.0f : 1.0f));
 
@@ -410,7 +430,7 @@ bool ShowMainMenu(FontSetting *fontSetting, Texture2D gameRenderTexture,
                                optionFontSize, optionFontSize },
                        (Vector2){ controlX + 20.0f, controlY },
                        buttonColor, buttonHighlightColor,
-                       selectionIndex == 8)) {
+                       selectionIndex == 9)) {
                 mouseInvertedX = !mouseInvertedX;
             }
             if (mouseInvertedX) {
@@ -426,10 +446,10 @@ bool ShowMainMenu(FontSetting *fontSetting, Texture2D gameRenderTexture,
             Slider(fontSetting, delta, "Up/down turn speed: ", "%1.1f",
                    &mouseYVal, 0.0f, 4.0f, 0.1f,
                    (Vector2){ controlX + controlOffsetX,
-                           controlY + optionFontSize / 2.0f }, 220.0f,
+                           controlY + optionFontSize / 2.0f }, 120.0f * uiScale,
                    (Vector2){ controlX, controlY },
                    buttonColor, buttonHighlightColor,
-                   selectionIndex == 9);
+                   selectionIndex == 10);
             *mouseSpeedY = (int)(mouseYVal * 100.0f
                                  * (mouseInvertedY ? -1.0f : 1.0f));
 
@@ -439,7 +459,7 @@ bool ShowMainMenu(FontSetting *fontSetting, Texture2D gameRenderTexture,
                                optionFontSize, optionFontSize },
                        (Vector2){ controlX + 20.0f, controlY },
                        buttonColor, buttonHighlightColor,
-                       selectionIndex == 10)) {
+                       selectionIndex == 11)) {
                 mouseInvertedY = !mouseInvertedY;
             }
             if (mouseInvertedY) {
@@ -454,7 +474,8 @@ bool ShowMainMenu(FontSetting *fontSetting, Texture2D gameRenderTexture,
                        (Rectangle){ controlX, controlY,
                                optionEntryHeight * 3.6f - fontOffset,
                                optionEntryHeight },
-                       (Vector2){ controlX + 20.0f, controlY + 5.0f * uiScale },
+                       (Vector2){ controlX + 10.0f * uiScale,
+                               controlY + 3.5f * uiScale },
                        buttonColor, buttonHighlightColor,
                        selectionIndex == 1)) {
                 optionsOpened = true;

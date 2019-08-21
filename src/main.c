@@ -71,6 +71,7 @@ int main(void) {
     int mouseX = -1;
     int mouseY = -1;
     bool mouseLookEnabled = false;
+    bool narrationEnabled = true;
 
     // Progress values
     int lightsStage = 0;
@@ -154,7 +155,8 @@ int main(void) {
             windowClosedInMenu |=
                 ShowMainMenu(&fontSetting, targetTex.texture,
                              firstMainMenuShown, &fieldOfView, &bobbingIntensity,
-                             &mouseSpeedX, &mouseSpeedY, &showMetersWalked);
+                             &mouseSpeedX, &mouseSpeedY, &showMetersWalked,
+                             &narrationEnabled);
             firstMainMenuShown = true;
         }
 
@@ -355,7 +357,8 @@ int main(void) {
         // Narration text display
         int screenHeight = GetScreenHeight();
         float fontSize = screenHeight / 240.0f * 12.0f;
-        if (narrationStage >= 0 && narrationStage < COMMENTS_COUNT) {
+        if (narrationStage >= 0 && narrationStage < COMMENTS_COUNT
+            && narrationEnabled) {
             narrationTime += delta;
             int linesPerScreen = 2;
             int lineIndex = GetLine(narrationTime, narrationStage,

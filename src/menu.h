@@ -22,6 +22,7 @@
 
 bool ShowMainMenu(FontSetting *fontSetting, Texture2D gameRenderTexture,
                   bool gameStarted, float *fov, float *bobIntensity,
-                  int *mouseSpeedX, int *mouseSpeedY, bool *showMetersWalked);
+                  int *mouseSpeedX, int *mouseSpeedY, bool *showMetersWalked,
+                  bool *narrationEnabled);
 
 #endif
