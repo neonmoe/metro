@@ -18,7 +18,7 @@
 #ifndef RENDER_UTILS_H
 #define RENDER_UTILS_H
 
-#define VIRTUAL_SCREEN_HEIGHT 256
+#define VIRTUAL_SCREEN_HEIGHT 180
 
 #include "raylib.h"
 

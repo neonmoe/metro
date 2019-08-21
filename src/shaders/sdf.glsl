@@ -35,8 +35,10 @@
 #define COLOR_STATION_LINING_WHITE vec3(270.0 / 255.0, 270.0 / 255.0, 270.0 / 255.0)
 #define COLOR_STATION_LINING_RED vec3(270.0 / 255.0, 80.0 / 255.0, 80.0 / 255.0)
 #define COLOR_STATION_LIGHTS vec3(300.0 / 255.0, 300.0 / 255.0, 300.0 / 255.0)
+#define COLOR_DISPLAY_BACK vec3(93.0 / 255.0, 93.0 / 255.0, 79.0 / 255.0)
+#define COLOR_DISPLAY_LIGHT vec3(120.0 / 255.0, 150.0 / 255.0, 270.0 / 255.0)
 
-#define STATION_START_Z 10.0
+#define STATION_START_Z (maxDistance - 100.0)
 #define STATION_WIDTH 16.0
 
 struct Camera {
@@ -292,8 +294,31 @@ SDFSample sdfStationCeilingLights(vec3 samplePos) {
     return SDFSample(max(distance, boundingBoxDistance), COLOR_STATION_LIGHTS);
 }
 
+SDFSample sdfStationTrainDisplay(vec3 samplePos) {
+    float startZ = STATION_START_Z;
+    if (samplePos.z < startZ + 5.0 || samplePos.z >= startZ + 85.0) {
+        return SDFSample(100000.0, vec3(0.0, 0.0, 0.0));
+    }
+    float centerPointX = STATION_WIDTH / 2.0 + 2.0;
+    vec3 rand = random(floor(samplePos.x / 1.5), floor(samplePos.z / 1.5));
+    vec3 period = vec3(0.0, 0.0, 10.0);
+    vec3 repeatedSample = mod(samplePos, period) - 0.5 * period;
+    repeatedSample.x = abs(repeatedSample.x + centerPointX) - centerPointX;
+    float poleDistance = sdfBox(repeatedSample, vec3(-3.2, 5.8, 2.0),
+                                vec3(1.1, 0.15, 0.15));
+    float distance = sdfBox(repeatedSample, vec3(-3.3, 5.0, 2.0),
+                            vec3(0.8, 0.5, 0.2));
+    float displayDistance = sdfBox(repeatedSample, vec3(-3.3, 5.0, 2.0),
+                                   vec3(0.65, 0.35, 0.21));
+    if (displayDistance < distance) {
+        return SDFSample(distance, COLOR_DISPLAY_LIGHT);
+    } else {
+        return SDFSample(min(distance, poleDistance), COLOR_DISPLAY_BACK);
+    }
+}
+
 #define ROOM_COUNT 3
-#define OBJECTS_COUNT 10
+#define OBJECTS_COUNT 11
 SDFSample sdf(vec3 samplePos, bool ignoreLightMeshes) {
     if (samplePos.z > 0) {
         samplePos = transformFromMetroSpace(samplePos);
@@ -311,6 +336,8 @@ SDFSample sdf(vec3 samplePos, bool ignoreLightMeshes) {
     //   - darkened parts for entry to metro
     //   - dark roof
     //   - white/red lining along the roof
+    //   - ceiling lights
+    //   - train displays
     // Scene additions TODO:
     // - rocks/gravel
     SDFSample roomSamples[ROOM_COUNT] = SDFSample[ROOM_COUNT]
@@ -327,7 +354,8 @@ SDFSample sdf(vec3 samplePos, bool ignoreLightMeshes) {
          sdfStationDarkenedParts(samplePos),
          sdfStationDarkenedRoof(samplePos),
          sdfStationBorderLights(samplePos),
-         sdfStationCeilingLights(samplePos));
+         sdfStationCeilingLights(samplePos),
+         sdfStationTrainDisplay(samplePos));
 
     float lowestDistance = samples[0].distance;
     vec3 color = samples[0].color;
@@ -415,7 +443,7 @@ float get_brightness(vec3 samplePos, vec3 normal, float fog) {
         for (int z = 0; z < 10; z++) {
             float margin = 2.0;
             float lightGap = STATION_WIDTH - margin * 2.0;
-            vec3 lightPosition = vec3(2.0 + margin + x * lightGap, 4.0,
+            vec3 lightPosition = vec3(2.0 + margin + x * lightGap, 6.5,
                                       STATION_START_Z + z * 9.0 + 4.5);
             lightPosition = transformToMetroSpace(lightPosition);
             diffuse += get_light_contribution(samplePos, normal, lightPosition,
