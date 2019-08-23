@@ -148,14 +148,23 @@ fi
 rm *.o
 [ -z "$QUIET" ] && echo "COMPILE-INFO: Game compiled into an executable in: $OUTPUT_DIR/"
 
+
+mkdir -p Metro.app/Contents
+cp $ROOT_DIR/resources/macos/Info.plist Metro.app/Contents/Info.plist
+mkdir -p Metro.app/Contents/MacOS
+mv $GAME_NAME Metro.app/Contents/MacOS/$GAME_NAME
+
+mkdir -p Metro.app/Contents/Resources
+cd Metro.app/Contents/Resources
+cp $ROOT_DIR/resources/macos/icon.icns Metro.icns
 mkdir -p metro_assets
 cd metro_assets
-cp $ROOT_DIR/src/icon.png .
+cp $ROOT_DIR/resources/icon.png .
 cp -r $ROOT_DIR/src/shaders .
 mkdir -p fonts
 cp $ROOT_DIR/vendor/vt323/vt323.ttf fonts/
 cp $ROOT_DIR/vendor/open-sans/open_sans.ttf fonts/
-cd ..
+cd ../../MacOS
 [ -z "$QUIET" ] && echo "COMPILE-INFO: Game resources copied into: $OUTPUT_DIR/"
 
 if [ -n "$STRIP_IT" ]; then

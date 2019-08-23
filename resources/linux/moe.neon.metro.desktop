@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=A Walk In A Metro Tunnel
+Comment=A metro tunnel exploration game featuring floating-point weirdness
+Exec=metro
+Icon=metro-game.png
+Terminal=false
+Categories=Game;AdventureGame;
