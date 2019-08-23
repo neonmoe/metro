@@ -44,7 +44,8 @@
 #define COMMENT_LENGTH (DEFAULT_MAX_DISTANCE / COMMENTS_COUNT)
 #define BACKTRACKING_WARNING_DISTANCE 10.0f
 
-#define SECONDS_PER_CHARACTER 0.1f
+#define LONGEST_COMMENT_CHARACTER_COUNT_ESTIMATE 400
+#define METERS_PER_CHARACTER (DEFAULT_MAX_DISTANCE / (COMMENTS_COUNT * LONGEST_COMMENT_CHARACTER_COUNT_ESTIMATE))
 
 bool FileMissing(const char *path);
 void DrawWarningText(const char *text, int fontSize, int y, Color color);
@@ -76,7 +77,7 @@ int main(void) {
     // Progress values
     int lightsStage = 0;
     int narrationStage = -1;
-    float narrationTime = 0.0f;
+    float narrationStartZ = 0.0f;
     float furthestDistanceSoFar = cameraPosition[2];
     float backtrackingTime = 0.0f;
 
@@ -299,8 +300,8 @@ int main(void) {
             lightsStage++;
         }
         if (cameraPosition[2] > (narrationStage + 1) * COMMENT_LENGTH + 6) {
+            narrationStartZ = (narrationStage + 1) * COMMENT_LENGTH + 6;
             narrationStage++;
-            narrationTime = 0.0f;
         }
 
         // Backtracking check
@@ -359,7 +360,7 @@ int main(void) {
         float fontSize = screenHeight / 240.0f * 12.0f;
         if (narrationStage >= 0 && narrationStage < COMMENTS_COUNT
             && narrationEnabled) {
-            narrationTime += delta;
+            float narrationTime = cameraPosition[2] - narrationStartZ;
             int linesPerScreen = 2;
             int lineIndex = GetLine(narrationTime, narrationStage,
                                     linesPerScreen);
@@ -518,7 +519,7 @@ bool ShowEpilepsyWarning(FontSetting *fontSetting) {
 Vector3 GetLegalPlayerMovement(Vector3 position, Vector3 movement, float maxDistance) {
     Vector3d newPos = Vector3dAdd(FromVector3(position), FromVector3(movement));
     Vector3d transformedPos = TransformToMetroSpaceD(newPos, maxDistance);
-    if (transformedPos.x > -1.8f && transformedPos.x < 1.8f) {
+    if (transformedPos.x > -1.5f && transformedPos.x < 1.5f) {
         return ToVector3(newPos);
     }
     return position;
@@ -541,7 +542,7 @@ int GetLine(float narrationTime, int narrationStage, int linesPerScreen) {
     for (; lineIndex < COMMENT_LINES; lineIndex += linesPerScreen) {
         for (int j = 0; j < linesPerScreen; j++) {
             const char *line = lines[lineIndex + j];
-            timeCounter += (float)strlen(line) * SECONDS_PER_CHARACTER;
+            timeCounter += (float)strlen(line) * METERS_PER_CHARACTER;
         }
         if (narrationTime < timeCounter) {
             if (narrationTime > timeCounter - 0.5f) {

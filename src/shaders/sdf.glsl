@@ -165,8 +165,8 @@ SDFSample sdfRailPlanks(vec3 samplePos) {
 
 SDFSample sdfLightMeshes(vec3 samplePos) {
     vec3 period = vec3(0.0, 0.0, 9.0);
-    vec3 repeatedSample = mod(samplePos, period) - 0.5 * period;
-    float distance = sdfRoundedBox(repeatedSample, vec3(-1.8, 3.6, -1.0), vec3(0.2, 0.2, 0.3), 0.05);
+    vec3 repeatedSample = mod(samplePos, period);
+    float distance = sdfRoundedBox(repeatedSample, vec3(-1.8, 3.6, 1.0), vec3(0.2, 0.2, 0.3), 0.05);
     if (samplePos.z > STATION_START_Z && samplePos.z <= STATION_START_Z + 90.0) {
         return SDFSample(100000.0, vec3(0.0, 0.0, 0.0));
     } else if (abs(floor(samplePos.z / 9.0) - stage) <= 1) {
@@ -431,7 +431,7 @@ float get_brightness(vec3 samplePos, vec3 normal, float fog) {
     float lightDistance = 11.0;
     // Lights along the tunnel
     for (int i = stage - 1; i <= stage + 1; i++) {
-        vec3 lightPosition = transformToMetroSpace(vec3(1.8, 3.6, 3.5 + 9.0 * float(i)));
+        vec3 lightPosition = transformToMetroSpace(vec3(1.8, 3.6, 1.0 + 9.0 * float(i)));
         if (lightPosition.z > STATION_START_Z && lightPosition.z <= STATION_START_Z + 90.0) {
             continue;
         }
