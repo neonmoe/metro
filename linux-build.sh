@@ -146,7 +146,6 @@ fi
 rm *.o
 [ -z "$QUIET" ] && echo "COMPILE-INFO: Game compiled into an executable in: $OUTPUT_DIR/"
 
-cp $ROOT_DIR/resources/icon.png metro-game.png
 cp $ROOT_DIR/resources/linux/moe.neon.metro.desktop .
 mkdir -p metro_assets
 cd metro_assets

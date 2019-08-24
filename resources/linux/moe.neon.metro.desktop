@@ -1,9 +1,10 @@
 [Desktop Entry]
 Type=Application
-Version=1.0
+Version=1.1
 Name=A Walk In A Metro Tunnel
 Comment=A metro tunnel exploration game featuring floating-point weirdness
-Exec=metro
-Icon=metro-game.png
+# Replace the Exec line with an absolute path to the 'metro' executable if known
+Exec=sh -c 'cd %k; ./metro'
+Icon=applications-games-symbolic
 Terminal=false
 Categories=Game;AdventureGame;
