@@ -269,7 +269,7 @@ bool ShowMainMenu(FontSetting *fontSetting, Texture2D gameRenderTexture,
         // Draw game
         DrawGameView(gameRenderTexture);
         // Draw filter to fade it out a bit
-        char filterAlpha;
+        int filterAlpha;
         if (gameStarted) {
             float filterAnimTime = 0.2f;
             filterAlpha = (char)(Clamp((time - startTime) / filterAnimTime,
