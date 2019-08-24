@@ -545,7 +545,7 @@ int GetLine(float narrationTime, int narrationStage, int linesPerScreen) {
             timeCounter += (float)strlen(line) * METERS_PER_CHARACTER;
         }
         if (narrationTime < timeCounter) {
-            if (narrationTime > timeCounter - 0.5f) {
+            if (narrationTime > timeCounter - METERS_PER_CHARACTER * 2.0f) {
                 // Leave gaps between lines
                 return -1;
             }
