@@ -28,4 +28,16 @@ const char *resourcePaths[RESOURCE_COUNT] = {
     "metro_assets/shaders/sdf.glsl", "metro_assets/icon.png"
 };
 
+#if defined(__APPLE__)
+const char *GetResourcePathForMacOS(int index);
+#endif
+
+const char* GetResourcePath(int index) {
+#if defined(__APPLE__)
+    return GetResourcePathForMacOS(resourcePaths[index]);
+#else
+    return resourcePaths[index];
+#endif
+}
+
 #endif

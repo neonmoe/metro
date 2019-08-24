@@ -92,15 +92,15 @@ int main(void) {
     InitWindow(DEFAULT_SCREEN_WIDTH, DEFAULT_SCREEN_HEIGHT,
                "A Walk In A Metro Tunnel");
 
-    Image windowIcon = LoadImage(resourcePaths[RESOURCE_ICON]);
+    Image windowIcon = LoadImage(GetResourcePath(RESOURCE_ICON));
     SetWindowIcon(windowIcon);
 
     if (EnsureResourcesExist()) {
         return 0;
     }
 
-    Font vt323Font = LoadFontEx(resourcePaths[RESOURCE_VT323], 72, 0, 0);
-    Font openSansFont = LoadFontEx(resourcePaths[RESOURCE_OPEN_SANS], 72, 0, 0);
+    Font vt323Font = LoadFontEx(GetResourcePath(RESOURCE_VT323), 72, 0, 0);
+    Font openSansFont = LoadFontEx(GetResourcePath(RESOURCE_OPEN_SANS), 72, 0, 0);
     FontSetting fontSetting = {
         vt323Font, openSansFont, false, NULL /* This is set immediately after */
     };
@@ -440,7 +440,7 @@ bool EnsureResourcesExist(void) {
             lastFileCheck = time;
             missingFiles = false;
             for (int i = 0; i < RESOURCE_COUNT; i++) {
-                bool missing = FileMissing(resourcePaths[i]);
+                bool missing = FileMissing(GetResourcePath(i));
                 fileLoaded[i] = !missing;
                 missingFiles |= missing;
             }
@@ -452,7 +452,7 @@ bool EnsureResourcesExist(void) {
             int warningY = 200;
             for (int i = 0; i < RESOURCE_COUNT; i++) {
                 if (!fileLoaded[i]) {
-                    DrawWarningText(resourcePaths[i], 32, warningY, textColor);
+                    DrawWarningText(GetResourcePath(i), 32, warningY, textColor);
                     warningY += 48;
                 }
             }
@@ -464,7 +464,7 @@ bool EnsureResourcesExist(void) {
 
 static Shader LoadSDFShaderWithVersion(char* versionString) {
     // Should this be freed?
-    char* rawShaderCode = LoadText(resourcePaths[RESOURCE_SHADER]);
+    char* rawShaderCode = LoadText(GetResourcePath(RESOURCE_SHADER));
 
     // Memory: Version string + \n + shader code + \0
     int len = strlen(versionString) + 1 + strlen(rawShaderCode) + 1;

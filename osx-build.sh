@@ -6,6 +6,7 @@ GAME_NAME="metro"
 # Example with two source folders:
 # SOURCES="src/*.c src/submodule/*.c"
 SOURCES="src/*.c"
+OBJ_SOURCES="src/*.m"
 
 # Set your raylib/src location here (relative path!)
 RAYLIB_SRC="vendor/raylib"
@@ -82,6 +83,7 @@ fi
 # Directories
 ROOT_DIR=$PWD
 SOURCES="$ROOT_DIR/$SOURCES"
+OBJ_SOURCES="$ROOT_DIR/$OBJ_SOURCES"
 RAYLIB_SRC="$ROOT_DIR/$RAYLIB_SRC"
 
 # Flags
@@ -140,9 +142,11 @@ cd $OUTPUT_DIR
 [ -z "$QUIET" ] && echo "COMPILE-INFO: Compiling game code."
 if [ -n "$REALLY_QUIET" ]; then
     $CC -c $SOURCES $COMPILATION_FLAGS $WARNING_FLAGS > /dev/null 2>&1
+    $CC -c -x objective-c $OBJ_SOURCES $COMPILATION_FLAGS $WARNING_FLAGS > /dev/null 2>&1
     $CC -o $GAME_NAME $ROOT_DIR/$TEMP_DIR/*.o *.o $LINK_FLAGS > /dev/null 2>&1
 else
     $CC -c $SOURCES $COMPILATION_FLAGS $WARNING_FLAGS
+    $CC -c -x objective-c $OBJ_SOURCES $COMPILATION_FLAGS $WARNING_FLAGS
     $CC -o $GAME_NAME $ROOT_DIR/$TEMP_DIR/*.o *.o $LINK_FLAGS
 fi
 rm *.o
