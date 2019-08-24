@@ -41,8 +41,8 @@ OpenGL, which most of this game relies upon. In addition to this, the
 game runs very badly on macOS's OpenGL drivers, so you can't really
 play the game even with an older version of macOS. There is a branch
 that has most of the compatibility problems fixed, except for the
-performance issue, [`macos-compatibility`](macos-compatibility), if
-you want to try building the game yourself.
+performance issue, `macos-compatibility`, if you want to try building
+the game yourself.
 
 ### License
 [This walking simulator](src/) is distributed under the [GNU
@@ -50,4 +50,3 @@ GPLv3](LICENSE.md) license. The dependencies (under
 [vendor/](vendor/)) are distributed under their respective licenses.
 
 [metro-plan]: https://www.hel.fi/hel2/ksv/Aineistot/maanalainen/Maanalaisen_yleiskaavan_selostus.pdf "A PDF containing the mentioned plans"
-[macos-compatibility]: https://git.neon.moe/neon/metro/src/branch/macos-compatibility
