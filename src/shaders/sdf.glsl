@@ -511,10 +511,18 @@ vec4 get_color(vec2 screenPosition, vec3 position, vec3 rotation) {
     }
 }
 
+#if __VERSION__ == 330
+out vec4 out_color;
+#endif
+
 void main() {
     // NOTE: The y coordinate is flipped because we're rendering to a render texture
     vec2 pixelCoords = vec2((gl_FragCoord.x - resolution.x / 2.0) / resolution.y,
                             (gl_FragCoord.y - resolution.y / 2.0) / resolution.y * -1.0);
-
-    gl_FragColor = get_color(pixelCoords, cameraPosition, cameraRotation);
+    vec4 finalColor = get_color(pixelCoords, cameraPosition, cameraRotation);
+#if __VERSION__ == 330
+    out_color = finalColor;
+#else
+    gl_FragColor = finalColor;
+#endif
 }
