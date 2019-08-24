@@ -15,7 +15,10 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#version 120
+// If using this shader somewhere else, uncomment the following
+// (this shader should work with pretty much any version of glsl)
+// (this is commented because the metro game adds the version header in code)
+// #version 120
 
 // Ray marching variables (affect performance a lot)
 #define RAY_STEPS_MAX 128
@@ -50,8 +53,6 @@ struct SDFSample {
     float distance;
     vec3 color;
 };
-
-varying vec4 position;
 
 uniform vec2 resolution;
 uniform vec3 cameraPosition;

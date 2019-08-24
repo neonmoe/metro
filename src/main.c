@@ -15,10 +15,6 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-// TODO: For Raspberry Pi compatibility, add OpenGL ES version of the shader
-// (it's probably enough to just load the shaders and switch
-// around the #version to "100 es")
-
 #include <math.h>
 #include <string.h>
 #include <stdio.h>
@@ -26,6 +22,7 @@
 
 #include "raylib.h"
 #include "raymath.h"
+#include "rlgl.h"
 #include "script.h"
 #include "sdf_utils.h"
 #include "resources.h"
@@ -50,6 +47,7 @@
 bool FileMissing(const char *path);
 void DrawWarningText(const char *text, int fontSize, int y, Color color);
 bool EnsureResourcesExist(void);
+Shader LoadSDFShader(void);
 bool ShowEpilepsyWarning(FontSetting *fontSetting);
 Rectangle GetRenderSrc(int screenWidth, int screenHeight);
 Rectangle GetRenderDest(int screenWidth, int screenHeight);
@@ -112,7 +110,7 @@ int main(void) {
      * mainFont because MSVC complains if you try to set currentFont
      * to &vt323Font in the initializer */
 
-    Shader sdfShader = LoadShader(0, resourcePaths[RESOURCE_SHADER]);
+    Shader sdfShader = LoadSDFShader();
     int resolutionLocation = GetShaderLocation(sdfShader, "resolution");
     int cameraPositionLocation = GetShaderLocation(sdfShader, "cameraPosition");
     int cameraRotationLocation = GetShaderLocation(sdfShader, "cameraRotation");
@@ -462,6 +460,41 @@ bool EnsureResourcesExist(void) {
         }
     }
     return false;
+}
+
+static Shader LoadSDFShaderWithVersion(char* versionString) {
+    // Should this be freed?
+    char* rawShaderCode = LoadText(resourcePaths[RESOURCE_SHADER]);
+
+    // Memory: Version string + \n + shader code + \0
+    int len = strlen(versionString) + 1 + strlen(rawShaderCode) + 1;
+
+    char* shaderCode = (char *)malloc(len);
+    snprintf(shaderCode, len, "%s\n%s", versionString, rawShaderCode);
+    Shader shader = LoadShaderCode(0, shaderCode);
+
+    // The shader code memory can be freed after use, because LoadShaderCode
+    // just passes the code to glShaderSource, whose documentation
+    // explicitly states that the original memory can be freed,
+    // since it is copied.
+    free(shaderCode);
+    return shader;
+}
+
+Shader LoadSDFShader(void) {
+    int glVersion = rlGetVersion();
+    Shader shader;
+    if (glVersion == OPENGL_11) {
+        printf("ERROR: OpenGL 1.1 is not supported.\n");
+        shader = LoadShader(0, 0);
+    } else if (glVersion == OPENGL_33) {
+        shader = LoadSDFShaderWithVersion("#version 330");
+    } else if (glVersion == OPENGL_ES_20) {
+        shader = LoadSDFShaderWithVersion("#version 100 es");
+    } else {
+        shader = LoadSDFShaderWithVersion("#version 120");
+    }
+    return shader;
 }
 
 bool ShowEpilepsyWarning(FontSetting *fontSetting) {
